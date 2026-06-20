@@ -12,18 +12,26 @@ enum PortSide {
 class DeliveryTariff {
   final double havenFee;
   final double tunnelFee;
+  final double gensetFee;
+  final double adrFee;
   final double total;
   final PortSide destinationSide;
   final bool needsTunnel;
+  final bool hasGenset;
+  final bool isAdr;
   final int havenNumber;
   final int? estimatedMinutes;
 
   const DeliveryTariff({
     required this.havenFee,
     required this.tunnelFee,
+    required this.gensetFee,
+    required this.adrFee,
     required this.total,
     required this.destinationSide,
     required this.needsTunnel,
+    required this.hasGenset,
+    required this.isAdr,
     required this.havenNumber,
     this.estimatedMinutes,
   });
@@ -31,6 +39,8 @@ class DeliveryTariff {
   String get formattedTotal => '${total.toStringAsFixed(2)} €';
   String get formattedHavenFee => '${havenFee.toStringAsFixed(2)} €';
   String get formattedTunnelFee => '${tunnelFee.toStringAsFixed(2)} €';
+  String get formattedGensetFee => '${gensetFee.toStringAsFixed(2)} €';
+  String get formattedAdrFee => '${adrFee.toStringAsFixed(2)} €';
 }
 
 class TariffService {
@@ -93,8 +103,12 @@ class TariffService {
   static DeliveryTariff calculate({
     required int havenNumber,
     required PortSide driverCurrentSide,
+    bool hasGenset = false,
+    bool isAdr = false,
     Map<String, double>? remoteHavenTariffs,
     double? remoteTunnelFee,
+    double? remoteGensetFee,
+    double? remoteAdrFee,
     int? customEstimatedMinutes,
   }) {
     final destinationSide = getSide(havenNumber);
@@ -103,7 +117,13 @@ class TariffService {
     final actualTunnelFee = needsTunnel
         ? (remoteTunnelFee ?? AppConstants.tunnelFee)
         : 0.0;
-    final total = havenFee + actualTunnelFee;
+    final actualGensetFee = hasGenset
+        ? (remoteGensetFee ?? AppConstants.gensetFee)
+        : 0.0;
+    final actualAdrFee = isAdr
+        ? (remoteAdrFee ?? AppConstants.adrFee)
+        : 0.0;
+    final total = havenFee + actualTunnelFee + actualGensetFee + actualAdrFee;
 
     // Tahmini süre hesaplama
     int estimatedMinutes = AppConstants.averageDeliveryTimeMin;
@@ -117,9 +137,13 @@ class TariffService {
     return DeliveryTariff(
       havenFee: havenFee,
       tunnelFee: actualTunnelFee,
+      gensetFee: actualGensetFee,
+      adrFee: actualAdrFee,
       total: total,
       destinationSide: destinationSide,
       needsTunnel: needsTunnel,
+      hasGenset: hasGenset,
+      isAdr: isAdr,
       havenNumber: havenNumber,
       estimatedMinutes: estimatedMinutes,
     );

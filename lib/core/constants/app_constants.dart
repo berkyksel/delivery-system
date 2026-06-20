@@ -19,6 +19,12 @@ class AppConstants {
   // Default / Unknown Haven Fee
   static const double defaultHavenFee = 0.00;
 
+  // Genset Fee (motorlu şase)
+  static const double gensetFee = 0.00; // TBD — Remote Config ile güncellenecek
+
+  // ADR Fee (tehlikeli madde / patlayıcı)
+  static const double adrFee = 0.00; // TBD — Remote Config ile güncellenecek
+
   // Estimated durations (minutes)
   static const int averageTunnelWaitTime = 5;
   static const int averageDeliveryTimeMin = 20;
@@ -38,6 +44,8 @@ class AppConstants {
   // Remote Config Keys
   static const String rcTunnelFee = 'tunnel_fee';
   static const String rcHavenTariffs = 'haven_tariffs';
+  static const String rcGensetFee = 'genset_fee';   // YENİ
+  static const String rcAdrFee = 'adr_fee';         // YENİ
 
   // Currency
   static const String currencySymbol = '€';

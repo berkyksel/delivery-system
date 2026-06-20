@@ -6,6 +6,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/models/delivery_model.dart';
 import '../../../data/services/tariff_service.dart';
+import 'quote_preview_screen.dart';
 
 class DeliverySummaryScreen extends StatelessWidget {
   final DeliveryModel delivery;
@@ -79,39 +80,69 @@ class DeliverySummaryScreen extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Buttons
-            Row(
+            Column(
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => context.pop(),
-                    icon: const Icon(Icons.edit_rounded, size: 18),
-                    label: const Text('Düzenle'),
-                    style: OutlinedButton.styleFrom(
+                // ── Teklif Oluştur (Offerte) butonu — YENİ ─────────────────
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              QuotePreviewScreen(delivery: delivery),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+                    label: const Text('Fiyat Teklifi Oluştur  (Offerte)'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6C3FC5),
+                      foregroundColor: Colors.white,
                       minimumSize: const Size(0, 52),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      // Firestore'a kaydet
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('✓ Teslimat kaydedildi!'),
-                          backgroundColor: AppColors.success,
+                const SizedBox(height: 10),
+                // ── Düzenle + Kaydet ────────────────────────────────────────
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => context.pop(),
+                        icon: const Icon(Icons.edit_rounded, size: 18),
+                        label: const Text('Düzenle'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, 52),
                         ),
-                      );
-                      context.go(AppRoutes.home);
-                    },
-                    icon: const Icon(Icons.save_rounded, size: 18),
-                    label: const Text('Kaydet'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
-                      minimumSize: const Size(0, 52),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          // Firestore'a kaydet
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('✓ Teslimat kaydedildi!'),
+                              backgroundColor: AppColors.success,
+                            ),
+                          );
+                          context.go(AppRoutes.home);
+                        },
+                        icon: const Icon(Icons.save_rounded, size: 18),
+                        label: const Text('Kaydet'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.success,
+                          minimumSize: const Size(0, 52),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ).animate().fadeIn(delay: 600.ms),
@@ -167,6 +198,25 @@ class DeliverySummaryScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              // Genset / ADR rozet göstergesi
+              if (delivery.hasGenset || delivery.isAdr)
+                Wrap(
+                  spacing: 4,
+                  children: [
+                    if (delivery.hasGenset)
+                      _buildBadge(
+                        Icons.electrical_services_rounded,
+                        'Genset',
+                        const Color(0xFF00BCD4),
+                      ),
+                    if (delivery.isAdr)
+                      _buildBadge(
+                        Icons.warning_amber_rounded,
+                        'ADR',
+                        const Color(0xFFFF6B35),
+                      ),
+                  ],
+                ),
             ],
           ),
           const SizedBox(height: 16),
@@ -202,6 +252,24 @@ class DeliverySummaryScreen extends StatelessWidget {
               valueColor: AppColors.tunnel,
             ),
           ],
+          if (delivery.hasGenset) ...[
+            const SizedBox(height: 10),
+            const _InfoRow(
+              icon: Icons.electrical_services_rounded,
+              label: 'Genset',
+              value: 'Motor/Şase — Aktif',
+              valueColor: Color(0xFF00BCD4),
+            ),
+          ],
+          if (delivery.isAdr) ...[
+            const SizedBox(height: 10),
+            const _InfoRow(
+              icon: Icons.warning_amber_rounded,
+              label: 'ADR',
+              value: 'Tehlikeli Madde — Aktif',
+              valueColor: Color(0xFFFF6B35),
+            ),
+          ],
           if (delivery.estimatedMinutes != null) ...[
             const SizedBox(height: 10),
             _InfoRow(
@@ -220,6 +288,32 @@ class DeliverySummaryScreen extends StatelessWidget {
               valueColor: AppColors.textSecondary,
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBadge(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: color),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 9,
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -270,6 +364,34 @@ class DeliverySummaryScreen extends StatelessWidget {
               label: 'Kennedy Tünel Ücreti',
               value: '${delivery.tunnelFee.toStringAsFixed(2)} €',
               isHighlighted: true,
+              highlightColor: AppColors.tunnel,
+              icon: Icons.alt_route,
+            ),
+          ],
+          // ── Genset ücreti — YENİ ──────────────────────────────────────────
+          if (delivery.hasGenset) ...[
+            const SizedBox(height: 8),
+            _FeeRow(
+              label: 'Genset Ücreti',
+              value: delivery.gensetFee > 0
+                  ? '${delivery.gensetFee.toStringAsFixed(2)} €'
+                  : 'TBD',
+              isHighlighted: true,
+              highlightColor: const Color(0xFF00BCD4),
+              icon: Icons.electrical_services_rounded,
+            ),
+          ],
+          // ── ADR ücreti — YENİ ─────────────────────────────────────────────
+          if (delivery.isAdr) ...[
+            const SizedBox(height: 8),
+            _FeeRow(
+              label: 'ADR Ücreti',
+              value: delivery.adrFee > 0
+                  ? '${delivery.adrFee.toStringAsFixed(2)} €'
+                  : 'TBD',
+              isHighlighted: true,
+              highlightColor: const Color(0xFFFF6B35),
+              icon: Icons.warning_amber_rounded,
             ),
           ],
           const Divider(height: 24, color: AppColors.bgCardLight),
@@ -349,11 +471,15 @@ class _FeeRow extends StatelessWidget {
   final String label;
   final String value;
   final bool isHighlighted;
+  final Color highlightColor;
+  final IconData? icon;
 
   const _FeeRow({
     required this.label,
     required this.value,
     this.isHighlighted = false,
+    this.highlightColor = AppColors.tunnel,
+    this.icon,
   });
 
   @override
@@ -363,18 +489,15 @@ class _FeeRow extends StatelessWidget {
       children: [
         Row(
           children: [
-            if (isHighlighted)
-              const Padding(
-                padding: EdgeInsets.only(right: 6),
-                child: Icon(Icons.alt_route,
-                    size: 13, color: AppColors.tunnel),
+            if (isHighlighted && icon != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Icon(icon, size: 13, color: highlightColor),
               ),
             Text(
               label,
               style: TextStyle(
-                color: isHighlighted
-                    ? AppColors.tunnel
-                    : AppColors.textSecondary,
+                color: isHighlighted ? highlightColor : AppColors.textSecondary,
                 fontSize: 13,
               ),
             ),
@@ -383,7 +506,7 @@ class _FeeRow extends StatelessWidget {
         Text(
           value,
           style: TextStyle(
-            color: isHighlighted ? AppColors.tunnel : AppColors.textPrimary,
+            color: isHighlighted ? highlightColor : AppColors.textPrimary,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/services/tariff_service.dart';
 import '../../../data/models/delivery_model.dart';
@@ -24,6 +25,8 @@ class _NewDeliveryScreenState extends State<NewDeliveryScreen> {
   PortSide _driverSide = PortSide.rechteroever;
   DeliveryTariff? _calculatedTariff;
   bool _isCalculating = false;
+  bool _hasGenset = false;
+  bool _isAdr = false;
 
   @override
   void dispose() {
@@ -57,6 +60,8 @@ class _NewDeliveryScreenState extends State<NewDeliveryScreen> {
           _calculatedTariff = TariffService.calculate(
             havenNumber: havenNumber,
             driverCurrentSide: _driverSide,
+            hasGenset: _hasGenset,
+            isAdr: _isAdr,
           );
           _isCalculating = false;
         });
@@ -273,6 +278,48 @@ class _NewDeliveryScreenState extends State<NewDeliveryScreen> {
 
             const SizedBox(height: 16),
 
+            // ─── KONTEYNER ÖZELLİKLERİ (YENİ) ─────────────────────────────
+            _buildSection(
+              'KONTEYNER ÖZELLİKLERİ',
+              Icons.widgets_rounded,
+              [
+                // Genset Toggle
+                _ContainerOptionTile(
+                  icon: Icons.electrical_services_rounded,
+                  iconColor: const Color(0xFF00BCD4),
+                  title: 'Genset',
+                  subtitle: 'Motorlu şase / Reefer konteyner',
+                  dutchLabel: 'Genset (motor/chassis)',
+                  fee: AppConstants.gensetFee,
+                  isEnabled: _hasGenset,
+                  onToggle: (val) {
+                    setState(() => _hasGenset = val);
+                    _calculateTariff();
+                  },
+                ),
+                const SizedBox(height: 12),
+                Divider(color: AppColors.glassBorder, height: 1),
+                const SizedBox(height: 12),
+                // ADR Toggle
+                _ContainerOptionTile(
+                  icon: Icons.warning_amber_rounded,
+                  iconColor: const Color(0xFFFF6B35),
+                  title: 'ADR',
+                  subtitle: 'Tehlikeli madde / Patlayıcı',
+                  dutchLabel: 'ADR (gevaarlijke stoffen)',
+                  fee: AppConstants.adrFee,
+                  isEnabled: _isAdr,
+                  onToggle: (val) {
+                    setState(() => _isAdr = val);
+                    _calculateTariff();
+                  },
+                ),
+              ],
+            ).animate().fadeIn(delay: 300.ms, duration: 400.ms).slideY(begin: 0.1, end: 0),
+            // ────────────────────────────────────────────────────────────────
+
+            const SizedBox(height: 16),
+
             // Notlar
             _buildSection(
               'NOTLAR',
@@ -289,7 +336,7 @@ class _NewDeliveryScreenState extends State<NewDeliveryScreen> {
                   ),
                 ),
               ],
-            ).animate().fadeIn(delay: 300.ms, duration: 400.ms).slideY(begin: 0.1, end: 0),
+            ).animate().fadeIn(delay: 400.ms, duration: 400.ms).slideY(begin: 0.1, end: 0),
 
             const SizedBox(height: 24),
 
@@ -305,7 +352,7 @@ class _NewDeliveryScreenState extends State<NewDeliveryScreen> {
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-            ).animate().fadeIn(delay: 400.ms, duration: 400.ms),
+            ).animate().fadeIn(delay: 500.ms, duration: 400.ms),
 
             const SizedBox(height: 32),
           ],
@@ -349,6 +396,142 @@ class _NewDeliveryScreenState extends State<NewDeliveryScreen> {
   }
 }
 
+// ─── Konteyner Seçenek Kartı ─────────────────────────────────────────────────
+class _ContainerOptionTile extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final String dutchLabel;
+  final double fee;
+  final bool isEnabled;
+  final ValueChanged<bool> onToggle;
+
+  const _ContainerOptionTile({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.dutchLabel,
+    required this.fee,
+    required this.isEnabled,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: isEnabled
+            ? iconColor.withValues(alpha: 0.08)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isEnabled
+              ? iconColor.withValues(alpha: 0.4)
+              : AppColors.glassBorder,
+          width: isEnabled ? 1.5 : 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          // İkon
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isEnabled
+                  ? iconColor.withValues(alpha: 0.15)
+                  : AppColors.bgCardLight,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              size: 20,
+              color: isEnabled ? iconColor : AppColors.textMuted,
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Metin
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: isEnabled
+                            ? AppColors.textPrimary
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isEnabled
+                            ? iconColor.withValues(alpha: 0.15)
+                            : AppColors.bgCardLight,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        fee > 0
+                            ? '+${fee.toStringAsFixed(2)} €'
+                            : 'Fiyat TBD',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: isEnabled ? iconColor : AppColors.textMuted,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+                Text(
+                  dutchLabel,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: AppColors.textMuted.withValues(alpha: 0.7),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Toggle
+          Switch(
+            value: isEnabled,
+            onChanged: onToggle,
+            activeThumbColor: iconColor,
+            trackColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.selected)) {
+                return iconColor.withValues(alpha: 0.3);
+              }
+              return AppColors.bgCardLight;
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Tarife Önizleme Kartı ───────────────────────────────────────────────────
 class _TariffPreviewCard extends StatelessWidget {
   final DeliveryTariff tariff;
   const _TariffPreviewCard({required this.tariff});
@@ -424,6 +607,28 @@ class _TariffPreviewCard extends StatelessWidget {
               value: tariff.formattedTunnelFee,
               color: AppColors.tunnel,
               icon: Icons.alt_route,
+            ),
+          ],
+          if (tariff.hasGenset) ...[
+            const SizedBox(height: 6),
+            _FeeRow(
+              label: 'Genset Ücreti',
+              value: tariff.gensetFee > 0
+                  ? tariff.formattedGensetFee
+                  : 'TBD',
+              color: const Color(0xFF00BCD4),
+              icon: Icons.electrical_services_rounded,
+            ),
+          ],
+          if (tariff.isAdr) ...[
+            const SizedBox(height: 6),
+            _FeeRow(
+              label: 'ADR Ücreti',
+              value: tariff.adrFee > 0
+                  ? tariff.formattedAdrFee
+                  : 'TBD',
+              color: const Color(0xFFFF6B35),
+              icon: Icons.warning_amber_rounded,
             ),
           ],
           const Divider(color: AppColors.bgCardLight, height: 20),

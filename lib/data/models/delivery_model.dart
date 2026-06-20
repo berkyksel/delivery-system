@@ -11,6 +11,10 @@ class DeliveryModel {
   final bool tunnelUsed;
   final double havenFee;
   final double tunnelFee;
+  final bool hasGenset;
+  final double gensetFee;
+  final bool isAdr;
+  final double adrFee;
   final double totalFee;
   final int? estimatedMinutes;
   final String? notes;
@@ -28,6 +32,10 @@ class DeliveryModel {
     required this.tunnelUsed,
     required this.havenFee,
     required this.tunnelFee,
+    this.hasGenset = false,
+    this.gensetFee = 0.0,
+    this.isAdr = false,
+    this.adrFee = 0.0,
     required this.totalFee,
     this.estimatedMinutes,
     this.notes,
@@ -54,6 +62,10 @@ class DeliveryModel {
       tunnelUsed: tariff.needsTunnel,
       havenFee: tariff.havenFee,
       tunnelFee: tariff.tunnelFee,
+      hasGenset: tariff.hasGenset,
+      gensetFee: tariff.gensetFee,
+      isAdr: tariff.isAdr,
+      adrFee: tariff.adrFee,
       totalFee: tariff.total,
       estimatedMinutes: tariff.estimatedMinutes,
       notes: notes,
@@ -72,6 +84,10 @@ class DeliveryModel {
       'tunnelUsed': tunnelUsed,
       'havenFee': havenFee,
       'tunnelFee': tunnelFee,
+      'hasGenset': hasGenset,
+      'gensetFee': gensetFee,
+      'isAdr': isAdr,
+      'adrFee': adrFee,
       'totalFee': totalFee,
       'estimatedMinutes': estimatedMinutes,
       'notes': notes,
@@ -99,6 +115,10 @@ class DeliveryModel {
       tunnelUsed: data['tunnelUsed'] ?? false,
       havenFee: (data['havenFee'] ?? 0).toDouble(),
       tunnelFee: (data['tunnelFee'] ?? 0).toDouble(),
+      hasGenset: data['hasGenset'] ?? false,
+      gensetFee: (data['gensetFee'] ?? 0).toDouble(),
+      isAdr: data['isAdr'] ?? false,
+      adrFee: (data['adrFee'] ?? 0).toDouble(),
       totalFee: (data['totalFee'] ?? 0).toDouble(),
       estimatedMinutes: data['estimatedMinutes'],
       notes: data['notes'],
@@ -121,6 +141,10 @@ class DeliveryModel {
     bool? tunnelUsed,
     double? havenFee,
     double? tunnelFee,
+    bool? hasGenset,
+    double? gensetFee,
+    bool? isAdr,
+    double? adrFee,
     double? totalFee,
     int? estimatedMinutes,
     String? notes,
@@ -138,6 +162,10 @@ class DeliveryModel {
       tunnelUsed: tunnelUsed ?? this.tunnelUsed,
       havenFee: havenFee ?? this.havenFee,
       tunnelFee: tunnelFee ?? this.tunnelFee,
+      hasGenset: hasGenset ?? this.hasGenset,
+      gensetFee: gensetFee ?? this.gensetFee,
+      isAdr: isAdr ?? this.isAdr,
+      adrFee: adrFee ?? this.adrFee,
       totalFee: totalFee ?? this.totalFee,
       estimatedMinutes: estimatedMinutes ?? this.estimatedMinutes,
       notes: notes ?? this.notes,

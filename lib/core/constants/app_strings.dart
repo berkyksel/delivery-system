@@ -37,6 +37,31 @@ class AppStrings {
   static const String estimatedDuration = 'Tahmini Süre';
   static const String tunnelFeeValue = '17,60 €';
 
+  // Container Properties — Genset & ADR
+  static const String containerProperties = 'Konteyner Özellikleri';
+  static const String genset = 'Genset';
+  static const String gensetSubtitle = 'Motorlu şase / Reefer konteyner';
+  static const String gensetDutch = 'Genset (motor/chassis)';
+  static const String adr = 'ADR';
+  static const String adrSubtitle = 'Tehlikeli madde / patlayıcı';
+  static const String adrDutch = 'ADR (gevaarlijke stoffen)';
+  static const String gensetFeeLabel = 'Genset Ücreti';
+  static const String adrFeeLabel = 'ADR Ücreti';
+  static const String feeTbd = 'TBD';
+
+  // Quote / Offerte
+  static const String createQuote = 'Teklif Oluştur';
+  static const String quotePreview = 'Fiyat Teklifi';
+  static const String offerte = 'Offerte';
+  static const String shareQuote = 'Teklifi Paylaş';
+  static const String printQuote = 'Yazdır';
+  static const String quoteReference = 'Referans No';
+  static const String quoteDate = 'Tarih';
+  static const String quoteClient = 'Müşteri';
+  static const String quoteDetails = 'Teslimat Detayları';
+  static const String quotePriceBreakdown = 'Prijsopgave'; // Hollandaca
+  static const String quoteGenerating = 'PDF oluşturuluyor...';
+
   // Delivery
   static const String companyName = 'Firma Adı';
   static const String destination = 'Varış Noktası';
