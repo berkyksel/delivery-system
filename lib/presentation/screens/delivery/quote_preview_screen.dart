@@ -11,7 +11,13 @@ import '../../../data/services/quote_service.dart';
 
 class QuotePreviewScreen extends StatefulWidget {
   final DeliveryModel delivery;
-  const QuotePreviewScreen({super.key, required this.delivery});
+  final bool isInvoice;
+
+  const QuotePreviewScreen({
+    super.key,
+    required this.delivery,
+    this.isInvoice = false,
+  });
 
   @override
   State<QuotePreviewScreen> createState() => _QuotePreviewScreenState();
@@ -23,15 +29,33 @@ class _QuotePreviewScreenState extends State<QuotePreviewScreen> {
   bool _isSharing = false;
   String? _error;
 
+  // Aktif dil seçimi (PDF yeniden oluşturma için)
+  late QuoteLanguage _selectedLanguage;
+
   @override
   void initState() {
     super.initState();
+    _selectedLanguage = widget.delivery.quoteLanguage;
     _generatePdf();
   }
 
   Future<void> _generatePdf() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
     try {
-      final bytes = await QuoteService.generateOfferte(widget.delivery);
+      final Uint8List bytes;
+      if (widget.isInvoice) {
+        bytes = await QuoteService.generateInvoice(
+          widget.delivery.copyWith(quoteLanguage: _selectedLanguage),
+        );
+      } else {
+        bytes = await QuoteService.generateOfferte(
+          widget.delivery,
+          languageOverride: _selectedLanguage,
+        );
+      }
       if (mounted) {
         setState(() {
           _pdfBytes = bytes;
@@ -53,15 +77,17 @@ class _QuotePreviewScreenState extends State<QuotePreviewScreen> {
     setState(() => _isSharing = true);
     try {
       final dir = await getTemporaryDirectory();
+      final prefix = widget.isInvoice ? 'fatura' : 'offerte';
       final fileName =
-          'offerte_haven${widget.delivery.havenNumber}_${widget.delivery.companyName.replaceAll(' ', '_')}.pdf';
+          '${prefix}_haven${widget.delivery.havenNumber}_${widget.delivery.displayClientName.replaceAll(' ', '_')}.pdf';
       final file = File('${dir.path}/$fileName');
       await file.writeAsBytes(_pdfBytes!);
       await SharePlus.instance.share(
         ShareParams(
           files: [XFile(file.path, mimeType: 'application/pdf')],
-          subject:
-              'Offerte — ${widget.delivery.companyName} — Haven ${widget.delivery.havenNumber}',
+          subject: widget.isInvoice
+              ? 'Fatura — ${widget.delivery.displayClientName} — ${widget.delivery.invoiceNumber ?? ''}'
+              : 'Offerte — ${widget.delivery.displayClientName} — Haven ${widget.delivery.havenNumber}',
         ),
       );
     } catch (e) {
@@ -78,7 +104,6 @@ class _QuotePreviewScreenState extends State<QuotePreviewScreen> {
     }
   }
 
-
   Future<void> _printPdf() async {
     if (_pdfBytes == null) return;
     await Printing.layoutPdf(onLayout: (_) async => _pdfBytes!);
@@ -86,10 +111,13 @@ class _QuotePreviewScreenState extends State<QuotePreviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final title =
+        widget.isInvoice ? 'Fatura / Invoice' : 'Fiyat Teklifi — Offerte';
+
     return Scaffold(
       backgroundColor: AppColors.bgDark,
       appBar: AppBar(
-        title: const Text('Fiyat Teklifi — Offerte'),
+        title: Text(title),
         backgroundColor: AppColors.bgDark,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
@@ -97,13 +125,11 @@ class _QuotePreviewScreenState extends State<QuotePreviewScreen> {
         ),
         actions: [
           if (_pdfBytes != null) ...[
-            // Yazdır
             IconButton(
               icon: const Icon(Icons.print_rounded),
               tooltip: 'Yazdır',
               onPressed: _printPdf,
             ),
-            // Paylaş
             _isSharing
                 ? const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
@@ -123,8 +149,96 @@ class _QuotePreviewScreenState extends State<QuotePreviewScreen> {
           ],
         ],
       ),
-      body: _buildBody(),
+      body: Column(
+        children: [
+          // ── Dil seçici (fatura değilse) ────────────────────────────────────
+          if (!widget.isInvoice)
+            _buildLanguageBar(),
+
+          // ── PDF önizleme ───────────────────────────────────────────────────
+          Expanded(child: _buildBody()),
+        ],
+      ),
       bottomNavigationBar: _pdfBytes != null ? _buildBottomBar() : null,
+    );
+  }
+
+  Widget _buildLanguageBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        border: Border(bottom: BorderSide(color: AppColors.glassBorder)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'PDF DİLİ',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textMuted,
+              letterSpacing: 1.0,
+            ),
+          ),
+          const SizedBox(height: 6),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: QuoteLanguage.values.map((lang) {
+                final isSelected = _selectedLanguage == lang;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() => _selectedLanguage = lang);
+                      _generatePdf();
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.primary.withValues(alpha: 0.2)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.glassBorder,
+                          width: isSelected ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(lang.flag,
+                              style: const TextStyle(fontSize: 14)),
+                          const SizedBox(width: 5),
+                          Text(
+                            lang.label,
+                            style: TextStyle(
+                              color: isSelected
+                                  ? AppColors.textPrimary
+                                  : AppColors.textSecondary,
+                              fontSize: 12,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -171,17 +285,12 @@ class _QuotePreviewScreenState extends State<QuotePreviewScreen> {
               Text(
                 _error!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textSecondary),
+                style:
+                    const TextStyle(color: AppColors.textSecondary),
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _isLoading = true;
-                    _error = null;
-                  });
-                  _generatePdf();
-                },
+                onPressed: _generatePdf,
                 icon: const Icon(Icons.refresh_rounded),
                 label: const Text('Tekrar Dene'),
               ),
@@ -191,7 +300,6 @@ class _QuotePreviewScreenState extends State<QuotePreviewScreen> {
       );
     }
 
-    // PDF Önizleme
     return PdfPreview(
       build: (_) async => _pdfBytes!,
       allowPrinting: true,
@@ -222,7 +330,6 @@ class _QuotePreviewScreenState extends State<QuotePreviewScreen> {
       ),
       child: Row(
         children: [
-          // Yazdır
           Expanded(
             child: OutlinedButton.icon(
               onPressed: _printPdf,
@@ -236,7 +343,6 @@ class _QuotePreviewScreenState extends State<QuotePreviewScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          // Paylaş
           Expanded(
             flex: 2,
             child: ElevatedButton.icon(
@@ -246,14 +352,22 @@ class _QuotePreviewScreenState extends State<QuotePreviewScreen> {
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
+                          strokeWidth: 2, color: Colors.white),
                     )
-                  : const Icon(Icons.share_rounded, size: 18),
-              label: Text(_isSharing ? 'Paylaşılıyor...' : 'Teklifi Paylaş'),
+                  : Icon(
+                      widget.isInvoice
+                          ? Icons.send_rounded
+                          : Icons.share_rounded,
+                      size: 18),
+              label: Text(_isSharing
+                  ? 'Paylaşılıyor...'
+                  : widget.isInvoice
+                      ? 'Faturayı Paylaş'
+                      : 'Teklifi Paylaş'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
+                backgroundColor: widget.isInvoice
+                    ? AppColors.success
+                    : AppColors.accent,
                 foregroundColor: Colors.white,
                 minimumSize: const Size(0, 50),
               ),

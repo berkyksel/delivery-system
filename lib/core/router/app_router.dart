@@ -6,6 +6,7 @@ import '../../presentation/screens/home/home_screen.dart';
 import '../../presentation/screens/delivery/new_delivery_screen.dart';
 import '../../presentation/screens/delivery/delivery_summary_screen.dart';
 import '../../presentation/screens/delivery/quote_preview_screen.dart';
+import '../../presentation/screens/delivery/quick_quote_screen.dart';
 import '../../presentation/screens/history/history_screen.dart';
 import '../../presentation/screens/tariff/tariff_screen.dart';
 import '../../presentation/screens/profile/profile_screen.dart';
@@ -17,6 +18,7 @@ class AppRoutes {
   static const String register = '/register';
   static const String home = '/';
   static const String newDelivery = '/delivery/new';
+  static const String quickQuote = '/delivery/quick';
   static const String deliverySummary = '/delivery/summary';
   static const String quotePreview = '/delivery/quote';
   static const String history = '/history';
@@ -62,6 +64,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const NewDeliveryScreen(),
       ),
       GoRoute(
+        path: AppRoutes.quickQuote,
+        builder: (context, state) => const QuickQuoteScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.deliverySummary,
         builder: (context, state) => DeliverySummaryScreen(
           delivery: state.extra as DeliveryModel,
@@ -69,9 +75,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.quotePreview,
-        builder: (context, state) => QuotePreviewScreen(
-          delivery: state.extra as DeliveryModel,
-        ),
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is Map<String, dynamic>) {
+            return QuotePreviewScreen(
+              delivery: extra['delivery'] as DeliveryModel,
+              isInvoice: extra['isInvoice'] as bool? ?? false,
+            );
+          }
+          return QuotePreviewScreen(delivery: extra as DeliveryModel);
+        },
       ),
     ],
   );

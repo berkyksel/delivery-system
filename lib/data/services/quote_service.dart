@@ -3,26 +3,35 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../../data/models/delivery_model.dart';
+import '../../data/models/tariff_zone_model.dart';
 import '../../data/services/tariff_service.dart';
+import '../../data/services/language_service.dart';
 
 class QuoteService {
   // ─── Renk Paleti (PDF) ────────────────────────────────────────────────────
-  static final _colorPrimary = PdfColor.fromHex('#1A237E');    // Koyu lacivert
-  static final _colorAccent = PdfColor.fromHex('#2979FF');     // Mavi
-  static final _colorSuccess = PdfColor.fromHex('#00C853');    // Yeşil
-  static final _colorWarning = PdfColor.fromHex('#FF6B35');    // Turuncu (ADR)
-  static final _colorCyan = PdfColor.fromHex('#00BCD4');       // Cyan (Genset)
-  static final _colorBg = PdfColor.fromHex('#F8F9FC');         // Açık gri bg
-  static final _colorText = PdfColor.fromHex('#1C2333');       // Koyu metin
-  static final _colorTextLight = PdfColor.fromHex('#6B7280');  // Açık metin
-  static final _colorBorder = PdfColor.fromHex('#E5E7EB');     // Kenarlık
-  static final _colorTunnel = PdfColor.fromHex('#9C27B0');     // Mor (tünel)
+  static final _colorPrimary = PdfColor.fromHex('#1A237E');
+  static final _colorAccent = PdfColor.fromHex('#2979FF');
+  static final _colorSuccess = PdfColor.fromHex('#00C853');
+  static final _colorWarning = PdfColor.fromHex('#FF6B35');
+  static final _colorCyan = PdfColor.fromHex('#00BCD4');
+  static final _colorBg = PdfColor.fromHex('#F8F9FC');
+  static final _colorText = PdfColor.fromHex('#1C2333');
+  static final _colorTextLight = PdfColor.fromHex('#6B7280');
+  static final _colorBorder = PdfColor.fromHex('#E5E7EB');
+  static final _colorTunnel = PdfColor.fromHex('#9C27B0');
+  static final _colorDiesel = PdfColor.fromHex('#F59E0B');
+  static final _colorInvoice = PdfColor.fromHex('#059669');
 
-  /// Ana PDF üretim metodu
-  static Future<Uint8List> generateOfferte(DeliveryModel delivery) async {
+  // ─── Teklif PDF ───────────────────────────────────────────────────────────
+  static Future<Uint8List> generateOfferte(
+    DeliveryModel delivery, {
+    QuoteLanguage? languageOverride,
+  }) async {
+    final lang = languageOverride ?? delivery.quoteLanguage;
     final pdf = pw.Document();
     final refNo = _generateRefNo(delivery);
     final dateStr = DateFormat('dd-MM-yyyy').format(delivery.createdAt);
+    final L = (String key) => LanguageService.get(lang, key);
 
     pdf.addPage(
       pw.Page(
@@ -32,30 +41,35 @@ class QuoteService {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              // ── HEADER ──────────────────────────────────────────────────
-              _buildHeader(refNo, dateStr),
-              pw.SizedBox(height: 24),
-
-              // ── KLANT INFO (Müşteri Bilgisi) ─────────────────────────────
-              _buildClientSection(delivery),
+              _buildHeader(refNo, dateStr, L, isInvoice: false),
               pw.SizedBox(height: 20),
 
-              // ── HAVEN / TRANSPORT DETAILS ────────────────────────────────
-              _buildTransportSection(delivery),
-              pw.SizedBox(height: 20),
+              _buildClientSection(delivery, L),
+              pw.SizedBox(height: 16),
 
-              // ── PRIJSOPGAVE (Fiyat Teklifi) ──────────────────────────────
-              _buildPriceSection(delivery),
-              pw.SizedBox(height: 20),
+              // Güzergah bölümü (varsa)
+              if (delivery.hasRoute) ...[
+                _buildRouteSection(delivery, L),
+                pw.SizedBox(height: 16),
+              ],
 
-              // ── BADGES (Genset / ADR uyarıları) ─────────────────────────
+              // TIR bilgisi (varsa)
+              if (delivery.truckModelName != null) ...[
+                _buildTruckSection(delivery, L),
+                pw.SizedBox(height: 16),
+              ],
+
+              _buildTransportSection(delivery, L),
+              pw.SizedBox(height: 16),
+
+              _buildPriceSection(delivery, L),
+              pw.SizedBox(height: 16),
+
               if (delivery.hasGenset || delivery.isAdr)
-                _buildBadgeSection(delivery),
+                _buildBadgeSection(delivery, L),
 
               pw.Spacer(),
-
-              // ── FOOTER ──────────────────────────────────────────────────
-              _buildFooter(),
+              _buildFooter(L),
             ],
           );
         },
@@ -65,8 +79,70 @@ class QuoteService {
     return pdf.save();
   }
 
-  // ─── Header ───────────────────────────────────────────────────────────────
-  static pw.Widget _buildHeader(String refNo, String dateStr) {
+  // ─── Fatura PDF ───────────────────────────────────────────────────────────
+  static Future<Uint8List> generateInvoice(DeliveryModel delivery) async {
+    final lang = delivery.quoteLanguage;
+    final pdf = pw.Document();
+    final L = (String key) => LanguageService.get(lang, key);
+
+    final dateStr = delivery.invoiceDate != null
+        ? DateFormat('dd-MM-yyyy').format(delivery.invoiceDate!)
+        : DateFormat('dd-MM-yyyy').format(DateTime.now());
+    final dueDateStr = delivery.invoiceDueDate != null
+        ? DateFormat('dd-MM-yyyy').format(delivery.invoiceDueDate!)
+        : '';
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(36),
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              _buildInvoiceHeader(
+                delivery.invoiceNumber ?? '',
+                dateStr,
+                dueDateStr,
+                L,
+              ),
+              pw.SizedBox(height: 20),
+
+              _buildClientSection(delivery, L),
+              pw.SizedBox(height: 16),
+
+              if (delivery.hasRoute) ...[
+                _buildRouteSection(delivery, L),
+                pw.SizedBox(height: 16),
+              ],
+
+              _buildTransportSection(delivery, L),
+              pw.SizedBox(height: 16),
+
+              _buildPriceSection(delivery, L, isInvoice: true),
+              pw.SizedBox(height: 16),
+
+              // Ödeme bilgisi
+              _buildPaymentInfo(delivery, dueDateStr, L),
+
+              pw.Spacer(),
+              _buildFooter(L),
+            ],
+          );
+        },
+      ),
+    );
+
+    return pdf.save();
+  }
+
+  // ─── Header (Teklif) ──────────────────────────────────────────────────────
+  static pw.Widget _buildHeader(
+    String refNo,
+    String dateStr,
+    String Function(String) L, {
+    bool isInvoice = false,
+  }) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(20),
       decoration: pw.BoxDecoration(
@@ -110,13 +186,14 @@ class QuoteService {
             crossAxisAlignment: pw.CrossAxisAlignment.end,
             children: [
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const pw.EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 4),
                 decoration: pw.BoxDecoration(
                   color: _colorAccent,
                   borderRadius: pw.BorderRadius.circular(4),
                 ),
                 child: pw.Text(
-                  'OFFERTE',
+                  L('offerte'),
                   style: pw.TextStyle(
                     color: PdfColors.white,
                     fontSize: 13,
@@ -127,12 +204,14 @@ class QuoteService {
               ),
               pw.SizedBox(height: 6),
               pw.Text(
-                'Ref: $refNo',
-                style: pw.TextStyle(color: const PdfColor.fromInt(0xB3FFFFFF), fontSize: 9),
+                '${L('ref')}: $refNo',
+                style: pw.TextStyle(
+                    color: const PdfColor.fromInt(0xB3FFFFFF), fontSize: 9),
               ),
               pw.Text(
-                'Datum: $dateStr',
-                style: pw.TextStyle(color: const PdfColor.fromInt(0xB3FFFFFF), fontSize: 9),
+                '${L('date')}: $dateStr',
+                style: pw.TextStyle(
+                    color: const PdfColor.fromInt(0xB3FFFFFF), fontSize: 9),
               ),
             ],
           ),
@@ -141,8 +220,93 @@ class QuoteService {
     );
   }
 
+  // ─── Header (Fatura) ──────────────────────────────────────────────────────
+  static pw.Widget _buildInvoiceHeader(
+    String invoiceNo,
+    String dateStr,
+    String dueDateStr,
+    String Function(String) L,
+  ) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(20),
+      decoration: pw.BoxDecoration(
+        color: _colorInvoice,
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                'ANVERS LIMAN',
+                style: pw.TextStyle(
+                  color: PdfColors.white,
+                  fontSize: 22,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.SizedBox(height: 2),
+              pw.Text(
+                'Teslimat Yönetim Sistemi',
+                style: pw.TextStyle(
+                  color: const PdfColor.fromInt(0xB3FFFFFF),
+                  fontSize: 10,
+                ),
+              ),
+            ],
+          ),
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.end,
+            children: [
+              pw.Container(
+                padding:
+                    const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.white,
+                  borderRadius: pw.BorderRadius.circular(4),
+                ),
+                child: pw.Text(
+                  L('invoice'),
+                  style: pw.TextStyle(
+                    color: _colorInvoice,
+                    fontSize: 13,
+                    fontWeight: pw.FontWeight.bold,
+                    letterSpacing: 2,
+                  ),
+                ),
+              ),
+              pw.SizedBox(height: 6),
+              pw.Text(
+                invoiceNo,
+                style: pw.TextStyle(
+                    color: const PdfColor.fromInt(0xB3FFFFFF), fontSize: 9),
+              ),
+              pw.Text(
+                '${L('date')}: $dateStr',
+                style: pw.TextStyle(
+                    color: const PdfColor.fromInt(0xB3FFFFFF), fontSize: 9),
+              ),
+              if (dueDateStr.isNotEmpty)
+                pw.Text(
+                  '${L('dueDate')}: $dueDateStr',
+                  style: pw.TextStyle(
+                    color: PdfColors.white,
+                    fontSize: 9,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   // ─── Müşteri Bilgisi ──────────────────────────────────────────────────────
-  static pw.Widget _buildClientSection(DeliveryModel delivery) {
+  static pw.Widget _buildClientSection(
+      DeliveryModel delivery, String Function(String) L) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(14),
       decoration: pw.BoxDecoration(
@@ -158,7 +322,7 @@ class QuoteService {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(
-                  'KLANT / MÜŞTERİ',
+                  L('client'),
                   style: pw.TextStyle(
                     color: _colorTextLight,
                     fontSize: 8,
@@ -168,20 +332,38 @@ class QuoteService {
                 ),
                 pw.SizedBox(height: 6),
                 pw.Text(
-                  delivery.companyName,
+                  delivery.displayClientName,
                   style: pw.TextStyle(
                     color: _colorText,
                     fontSize: 16,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
-                if (delivery.contactPerson != null) ...[
+                if (delivery.contactPerson != null &&
+                    delivery.contactPerson!.isNotEmpty) ...[
                   pw.SizedBox(height: 3),
                   pw.Text(
-                    't.a.v. ${delivery.contactPerson}',
-                    style: pw.TextStyle(
-                      color: _colorTextLight,
-                      fontSize: 10,
+                    '${L('contactPerson')} ${delivery.contactPerson}',
+                    style:
+                        pw.TextStyle(color: _colorTextLight, fontSize: 10),
+                  ),
+                ],
+                if (delivery.isQuickQuote) ...[
+                  pw.SizedBox(height: 3),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(
+                        horizontal: 6, vertical: 2),
+                    decoration: pw.BoxDecoration(
+                      color: _colorDiesel.shade(0.9),
+                      borderRadius: pw.BorderRadius.circular(3),
+                    ),
+                    child: pw.Text(
+                      'QUICK QUOTE',
+                      style: pw.TextStyle(
+                        color: _colorDiesel,
+                        fontSize: 7,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -199,13 +381,150 @@ class QuoteService {
     );
   }
 
-  // ─── Transport Detayları ──────────────────────────────────────────────────
-  static pw.Widget _buildTransportSection(DeliveryModel delivery) {
+  // ─── Güzergah Bölümü ──────────────────────────────────────────────────────
+  static pw.Widget _buildRouteSection(
+      DeliveryModel delivery, String Function(String) L) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Text(
-          'TRANSPORTDETAILS',
+          L('route'),
+          style: pw.TextStyle(
+            color: _colorPrimary,
+            fontSize: 9,
+            fontWeight: pw.FontWeight.bold,
+            letterSpacing: 1.5,
+          ),
+        ),
+        pw.SizedBox(height: 8),
+        pw.Container(
+          padding: const pw.EdgeInsets.all(14),
+          decoration: pw.BoxDecoration(
+            color: _colorBg,
+            border: pw.Border.all(color: _colorBorder),
+            borderRadius: pw.BorderRadius.circular(6),
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              if (delivery.pickupHaven != null &&
+                  delivery.pickupHaven!.isNotEmpty)
+                _buildRouteRow(
+                  '⚓',
+                  L('pickupHaven'),
+                  delivery.pickupHaven!,
+                  _colorAccent,
+                ),
+              if (delivery.deliveryAddress != null &&
+                  delivery.deliveryAddress!.isNotEmpty) ...[
+                pw.SizedBox(height: 4),
+                _buildRouteRow(
+                  '↓',
+                  L('deliveryAddress'),
+                  delivery.deliveryAddress!,
+                  _colorText,
+                ),
+              ],
+              if (delivery.returnHaven != null &&
+                  delivery.returnHaven!.isNotEmpty) ...[
+                pw.SizedBox(height: 4),
+                _buildRouteRow(
+                  '⚓',
+                  L('returnHaven'),
+                  delivery.returnHaven!,
+                  _colorSuccess,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _buildRouteRow(
+    String icon,
+    String label,
+    String value,
+    PdfColor color,
+  ) {
+    return pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(icon, style: const pw.TextStyle(fontSize: 12)),
+        pw.SizedBox(width: 8),
+        pw.SizedBox(
+          width: 120,
+          child: pw.Text(
+            label,
+            style: pw.TextStyle(color: _colorTextLight, fontSize: 9),
+          ),
+        ),
+        pw.Expanded(
+          child: pw.Text(
+            value,
+            style: pw.TextStyle(
+              color: color,
+              fontSize: 10,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─── TIR Bilgisi ──────────────────────────────────────────────────────────
+  static pw.Widget _buildTruckSection(
+      DeliveryModel delivery, String Function(String) L) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        color: _colorBg,
+        border: pw.Border.all(color: _colorBorder),
+        borderRadius: pw.BorderRadius.circular(6),
+      ),
+      child: pw.Row(
+        children: [
+          pw.Text(
+            '🚛',
+            style: const pw.TextStyle(fontSize: 18),
+          ),
+          pw.SizedBox(width: 10),
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                delivery.truckModelName ?? '',
+                style: pw.TextStyle(
+                  color: _colorText,
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 11,
+                ),
+              ),
+              if (delivery.estimatedFuelLiters != null)
+                pw.Text(
+                  '${L('estimatedFuel')}: ${delivery.estimatedFuelLiters!.toStringAsFixed(1)} L',
+                  style: pw.TextStyle(
+                    color: _colorTextLight,
+                    fontSize: 9,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Transport Detayları ──────────────────────────────────────────────────
+  static pw.Widget _buildTransportSection(
+      DeliveryModel delivery, String Function(String) L) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          L('transportDetails'),
           style: pw.TextStyle(
             color: _colorPrimary,
             fontSize: 9,
@@ -221,24 +540,28 @@ class QuoteService {
           ),
           child: pw.Column(
             children: [
-              _buildDetailRow('Haven', 'Haven ${delivery.havenNumber}', isFirst: true),
               _buildDetailRow(
-                'Bestemming',
+                L('haven'),
+                'Haven ${delivery.havenNumber}',
+                isFirst: true,
+              ),
+              _buildDetailRow(
+                L('destination'),
                 '${delivery.destinationSide.dutchName} (${delivery.destinationSide.turkishName})',
               ),
               _buildDetailRow(
-                'Vertrekpunt',
+                L('departure'),
                 delivery.driverSideAtDelivery.dutchName,
               ),
               _buildDetailRow(
-                'Kennedy Tunnel',
-                delivery.tunnelUsed ? 'Ja — Tunnel doorkruist' : 'Nee',
+                L('tunnel'),
+                delivery.tunnelUsed ? L('tunnelYes') : L('tunnelNo'),
                 valueColor: delivery.tunnelUsed ? _colorTunnel : _colorTextLight,
               ),
               if (delivery.estimatedMinutes != null)
                 _buildDetailRow(
-                  'Geschatte tijd',
-                  '±${delivery.estimatedMinutes} minuten',
+                  L('estimatedTime'),
+                  '±${delivery.estimatedMinutes} ${L('minutes')}',
                   isLast: true,
                 ),
             ],
@@ -249,12 +572,32 @@ class QuoteService {
   }
 
   // ─── Fiyat Tablosu ────────────────────────────────────────────────────────
-  static pw.Widget _buildPriceSection(DeliveryModel delivery) {
+  static pw.Widget _buildPriceSection(
+    DeliveryModel delivery,
+    String Function(String) L, {
+    bool isInvoice = false,
+  }) {
+    // Baz ücret etiketi
+    String baseFeeLabel;
+    double baseFeeAmount;
+    if (delivery.tariffMode == TariffMode.havenBased) {
+      baseFeeLabel = 'Haven ${delivery.havenNumber} — ${L('havenFee')}';
+      baseFeeAmount = delivery.havenFee;
+    } else if (delivery.tariffMode == TariffMode.kmZone) {
+      final km = delivery.distanceKm?.toStringAsFixed(0) ?? '?';
+      baseFeeLabel = '${L('kmZoneFee')} ($km km)';
+      baseFeeAmount = delivery.havenFee; // zoneFee havenFee'ye yazılmış
+    } else {
+      final km = delivery.distanceKm?.toStringAsFixed(0) ?? '?';
+      baseFeeLabel = '${L('perKmFee')} ($km km)';
+      baseFeeAmount = delivery.havenFee;
+    }
+
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Text(
-          'PRIJSOPGAVE',
+          L('priceBreakdown'),
           style: pw.TextStyle(
             color: _colorPrimary,
             fontSize: 9,
@@ -272,7 +615,8 @@ class QuoteService {
             children: [
               // Tablo başlığı
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const pw.EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 8),
                 decoration: pw.BoxDecoration(
                   color: _colorPrimary.shade(0.9),
                   borderRadius: const pw.BorderRadius.only(
@@ -284,7 +628,7 @@ class QuoteService {
                   children: [
                     pw.Expanded(
                       child: pw.Text(
-                        'Omschrijving',
+                        L('description'),
                         style: pw.TextStyle(
                           color: PdfColors.white,
                           fontSize: 9,
@@ -293,7 +637,7 @@ class QuoteService {
                       ),
                     ),
                     pw.Text(
-                      'Bedrag (€)',
+                      L('amount'),
                       style: pw.TextStyle(
                         color: PdfColors.white,
                         fontSize: 9,
@@ -303,39 +647,48 @@ class QuoteService {
                   ],
                 ),
               ),
-              // Haven ücreti
-              _buildPriceRow(
-                'Haven ${delivery.havenNumber} — haventarief',
-                delivery.havenFee,
-              ),
-              // Tünel ücreti
+              // Baz ücret
+              _buildPriceRow(baseFeeLabel, baseFeeAmount),
+              // Tünel
               if (delivery.tunnelUsed)
                 _buildPriceRow(
-                  'Kennedy Tunnel — doorkruistoeslag',
+                  'Kennedy Tunnel — ${L('tunnelFee')}',
                   delivery.tunnelFee,
                   color: _colorTunnel,
                 ),
-              // Genset ücreti
+              // Genset
               if (delivery.hasGenset)
                 _buildPriceRow(
-                  'Genset toeslag (motor/chassis)',
+                  L('gensetFee'),
                   delivery.gensetFee,
                   color: _colorCyan,
                   isTbd: delivery.gensetFee <= 0,
+                  tbdLabel: L('tbdLabel'),
                 ),
-              // ADR ücreti
+              // ADR
               if (delivery.isAdr)
                 _buildPriceRow(
-                  'ADR toeslag (gevaarlijke stoffen)',
+                  L('adrFee'),
                   delivery.adrFee,
                   color: _colorWarning,
                   isTbd: delivery.adrFee <= 0,
+                  tbdLabel: L('tbdLabel'),
+                ),
+              // Dizel Toeslag
+              if (delivery.hasDieselSurcharge)
+                _buildPriceRow(
+                  '${L('dieselSurcharge')} (${delivery.dieselSurchargePercent.toStringAsFixed(1)}%)',
+                  delivery.dieselSurchargeFee,
+                  color: _colorDiesel,
                 ),
               // TOPLAM
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const pw.EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 12),
                 decoration: pw.BoxDecoration(
-                  color: _colorSuccess.shade(0.85),
+                  color: isInvoice
+                      ? _colorInvoice.shade(0.85)
+                      : _colorSuccess.shade(0.85),
                   borderRadius: const pw.BorderRadius.only(
                     bottomLeft: pw.Radius.circular(5),
                     bottomRight: pw.Radius.circular(5),
@@ -345,7 +698,7 @@ class QuoteService {
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
                     pw.Text(
-                      'TOTAAL',
+                      L('total'),
                       style: pw.TextStyle(
                         color: PdfColors.white,
                         fontSize: 12,
@@ -366,31 +719,122 @@ class QuoteService {
             ],
           ),
         ),
+        pw.SizedBox(height: 6),
+        pw.Text(
+          L('excVat'),
+          style: pw.TextStyle(
+            color: _colorTextLight,
+            fontSize: 8,
+            fontStyle: pw.FontStyle.italic,
+          ),
+        ),
+        pw.SizedBox(height: 3),
+        if (!isInvoice)
+          pw.Text(
+            L('validity'),
+            style: pw.TextStyle(
+              color: _colorTextLight,
+              fontSize: 8,
+              fontStyle: pw.FontStyle.italic,
+            ),
+          ),
       ],
     );
   }
 
-  // ─── Genset / ADR Uyarı Kartları ─────────────────────────────────────────
-  static pw.Widget _buildBadgeSection(DeliveryModel delivery) {
-    return pw.Row(
-      children: [
-        if (delivery.hasGenset) ...[
-          pw.Expanded(child: _buildBadge(
-            icon: '⚡',
-            label: 'GENSET',
-            sublabel: 'Motor/chassis aanwezig',
-            color: _colorCyan,
-          )),
-          if (delivery.isAdr) pw.SizedBox(width: 10),
+  // ─── Ödeme Bilgisi (Fatura) ───────────────────────────────────────────────
+  static pw.Widget _buildPaymentInfo(
+    DeliveryModel delivery,
+    String dueDateStr,
+    String Function(String) L,
+  ) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(14),
+      decoration: pw.BoxDecoration(
+        color: _colorInvoice.shade(0.9),
+        border: pw.Border.all(color: _colorInvoice),
+        borderRadius: pw.BorderRadius.circular(6),
+      ),
+      child: pw.Row(
+        children: [
+          pw.Expanded(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  '💳 Betaling / Ödeme / Payment',
+                  style: pw.TextStyle(
+                    color: _colorInvoice,
+                    fontSize: 10,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.SizedBox(height: 4),
+                pw.Text(
+                  'IBAN: BE XX XXXX XXXX XXXX',
+                  style: pw.TextStyle(
+                    color: _colorText,
+                    fontSize: 9,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (dueDateStr.isNotEmpty)
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
+              children: [
+                pw.Text(
+                  L('dueDate'),
+                  style: pw.TextStyle(
+                    color: _colorTextLight,
+                    fontSize: 8,
+                  ),
+                ),
+                pw.Text(
+                  dueDateStr,
+                  style: pw.TextStyle(
+                    color: _colorInvoice,
+                    fontSize: 14,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
         ],
-        if (delivery.isAdr)
-          pw.Expanded(child: _buildBadge(
-            icon: '⚠',
-            label: 'ADR',
-            sublabel: 'Gevaarlijke stoffen',
-            color: _colorWarning,
-          )),
-      ],
+      ),
+    );
+  }
+
+  // ─── Genset / ADR Uyarı Kartları ─────────────────────────────────────────
+  static pw.Widget _buildBadgeSection(
+      DeliveryModel delivery, String Function(String) L) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 16),
+      child: pw.Row(
+        children: [
+          if (delivery.hasGenset) ...[
+            pw.Expanded(
+              child: _buildBadge(
+                icon: '⚡',
+                label: 'GENSET',
+                sublabel: L('gensetBadge'),
+                color: _colorCyan,
+              ),
+            ),
+            if (delivery.isAdr) pw.SizedBox(width: 10),
+          ],
+          if (delivery.isAdr)
+            pw.Expanded(
+              child: _buildBadge(
+                icon: '⚠',
+                label: 'ADR',
+                sublabel: L('adrBadge'),
+                color: _colorWarning,
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -434,7 +878,7 @@ class QuoteService {
   }
 
   // ─── Footer ───────────────────────────────────────────────────────────────
-  static pw.Widget _buildFooter() {
+  static pw.Widget _buildFooter(String Function(String) L) {
     return pw.Column(
       children: [
         pw.Divider(color: _colorBorder),
@@ -443,15 +887,15 @@ class QuoteService {
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
             pw.Text(
-              'Anvers Liman Teslimat Sistemi',
+              L('footerCompany'),
               style: pw.TextStyle(color: _colorTextLight, fontSize: 8),
             ),
             pw.Text(
-              'Haven van Antwerpen — België',
+              L('footerPort'),
               style: pw.TextStyle(color: _colorTextLight, fontSize: 8),
             ),
             pw.Text(
-              'Alle prijzen zijn exclusief BTW',
+              L('excVat'),
               style: pw.TextStyle(
                 color: _colorTextLight,
                 fontSize: 8,
@@ -473,7 +917,8 @@ class QuoteService {
     PdfColor? valueColor,
   }) {
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      padding:
+          const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: pw.BoxDecoration(
         color: isFirst ? _colorBg : PdfColors.white,
         border: isLast
@@ -509,9 +954,11 @@ class QuoteService {
     double amount, {
     PdfColor? color,
     bool isTbd = false,
+    String tbdLabel = 'Nader te bepalen',
   }) {
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      padding:
+          const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: pw.BoxDecoration(
         border: pw.Border(
           bottom: pw.BorderSide(color: _colorBorder, width: 0.5),
@@ -528,12 +975,13 @@ class QuoteService {
             ),
           ),
           pw.Text(
-            isTbd ? 'Nader te bepalen' : '€ ${amount.toStringAsFixed(2)}',
+            isTbd ? tbdLabel : '€ ${amount.toStringAsFixed(2)}',
             style: pw.TextStyle(
               color: color ?? _colorText,
               fontSize: 10,
               fontWeight: pw.FontWeight.bold,
-              fontStyle: isTbd ? pw.FontStyle.italic : pw.FontStyle.normal,
+              fontStyle:
+                  isTbd ? pw.FontStyle.italic : pw.FontStyle.normal,
             ),
           ),
         ],
@@ -543,9 +991,12 @@ class QuoteService {
 
   static pw.Widget _buildZoneBadge(PortSide side) {
     final isRechts = side == PortSide.rechteroever;
-    final color = isRechts ? PdfColor.fromHex('#2979FF') : PdfColor.fromHex('#F57C00');
+    final color = isRechts
+        ? PdfColor.fromHex('#2979FF')
+        : PdfColor.fromHex('#F57C00');
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding:
+          const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: pw.BoxDecoration(
         color: color.shade(0.9),
         borderRadius: pw.BorderRadius.circular(4),
@@ -577,6 +1028,7 @@ class QuoteService {
     final month = now.month.toString().padLeft(2, '0');
     final day = now.day.toString().padLeft(2, '0');
     final haven = delivery.havenNumber.toString().padLeft(4, '0');
-    return 'ALT-$year$month$day-H$haven';
+    final prefix = delivery.isQuickQuote ? 'QQ' : 'ALT';
+    return '$prefix-$year$month$day-H$haven';
   }
 }

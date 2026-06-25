@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/theme_provider.dart';
+import '../../../core/theme/locale_provider.dart';
+import '../../../data/models/delivery_model.dart';
 import '../../../data/models/user_profile_model.dart';
 import '../../../data/services/tariff_service.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   // Mock profile - Firebase ile değiştirilecek
   UserProfile _profile = const UserProfile(
     uid: 'user_1',
@@ -322,24 +326,243 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildPreferencesCard() {
+    final isDark = ref.watch(themeProvider) == ThemeMode.dark;
+    final selectedLang = ref.watch(quoteLanguageProvider);
+
     return _buildSection(
       title: 'TERCİHLER',
       icon: Icons.settings_rounded,
       children: [
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text(
-            'Bildirimler',
-            style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+        // ── Bildirimler ───────────────────────────────────────────────────
+        Material(
+          color: Colors.transparent,
+          child: SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text(
+              'Bildirimler',
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+            ),
+            subtitle: const Text(
+              'Teslimat hatırlatmaları',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            ),
+            value: _profile.notificationsEnabled,
+            activeThumbColor: AppColors.accent,
+            onChanged: (v) => setState(
+                () => _profile = _profile.copyWith(notificationsEnabled: v)),
           ),
-          subtitle: const Text(
-            'Teslimat hatırlatmaları',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+        ),
+        const SizedBox(height: 8),
+        // ── Tema Seçici ───────────────────────────────────────────────────
+        _buildThemeSelector(isDark),
+        const SizedBox(height: 16),
+        // ── Teklif Dili Seçici ────────────────────────────────────────────
+        _buildQuoteLanguageSelector(selectedLang),
+      ],
+    );
+  }
+
+  Widget _buildThemeSelector(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(bottom: 10),
+          child: Text(
+            'Uygulama Teması',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-          value: _profile.notificationsEnabled,
-          activeThumbColor: AppColors.accent,
-          onChanged: (v) => setState(
-              () => _profile = _profile.copyWith(notificationsEnabled: v)),
+        ),
+        Row(
+          children: [
+            // Koyu Tema butonu
+            Expanded(
+              child: GestureDetector(
+                onTap: () => ref.read(themeProvider.notifier).setDark(),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? AppColors.primary.withValues(alpha: 0.2)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isDark
+                          ? AppColors.primary
+                          : AppColors.glassBorder,
+                      width: isDark ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.dark_mode_rounded,
+                        size: 22,
+                        color: isDark
+                            ? AppColors.primary
+                            : AppColors.textMuted,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Koyu',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: isDark
+                              ? FontWeight.w700
+                              : FontWeight.w400,
+                          color: isDark
+                              ? AppColors.textPrimary
+                              : AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            // Açık Tema butonu
+            Expanded(
+              child: GestureDetector(
+                onTap: () => ref.read(themeProvider.notifier).setLight(),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    color: !isDark
+                        ? AppColors.accent.withValues(alpha: 0.12)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: !isDark
+                          ? AppColors.accent
+                          : AppColors.glassBorder,
+                      width: !isDark ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.light_mode_rounded,
+                        size: 22,
+                        color: !isDark
+                            ? AppColors.accent
+                            : AppColors.textMuted,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Açık',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: !isDark
+                              ? FontWeight.w700
+                              : FontWeight.w400,
+                          color: !isDark
+                              ? AppColors.textPrimary
+                              : AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuoteLanguageSelector(QuoteLanguage selected) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(bottom: 10),
+          child: Text(
+            'Varsayılan Teklif Dili',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.only(bottom: 10),
+          child: Text(
+            'Yeni teslimat oluştururken otomatik seçilir',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 11,
+            ),
+          ),
+        ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: QuoteLanguage.values.map((lang) {
+            final isSelected = selected == lang;
+            return GestureDetector(
+              onTap: () =>
+                  ref.read(quoteLanguageProvider.notifier).setLanguage(lang),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.primary.withValues(alpha: 0.15)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColors.primary
+                        : AppColors.glassBorder,
+                    width: isSelected ? 1.5 : 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      lang.flag,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      lang.label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w400,
+                        color: isSelected
+                            ? AppColors.textPrimary
+                            : AppColors.textMuted,
+                      ),
+                    ),
+                    if (isSelected) ...
+                      [
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.check_circle_rounded,
+                          size: 13,
+                          color: AppColors.primary,
+                        ),
+                      ],
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
