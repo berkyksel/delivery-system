@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/constants/app_colors.dart';
 import '../../core/router/app_router.dart';
+import '../../core/theme/locale_provider.dart';
 
-class MainShell extends StatelessWidget {
+class MainShell extends ConsumerWidget {
   final Widget child;
   const MainShell({super.key, required this.child});
 
@@ -17,43 +18,59 @@ class MainShell extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final selectedIndex = _getSelectedIndex(context);
+    final l10n = ref.watch(appL10nProvider);
 
     return Scaffold(
       body: child,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(AppRoutes.newDelivery),
-        backgroundColor: AppColors.accent,
+        backgroundColor: Theme.of(context).colorScheme.secondary,
         foregroundColor: Colors.white,
         elevation: 4,
         icon: const Icon(Icons.add_rounded),
-        label: const Text(
-          'Yeni Teslimat',
-          style: TextStyle(fontWeight: FontWeight.w600),
+        label: Text(
+          l10n.navNewDelivery,
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: _BottomNavBar(selectedIndex: selectedIndex),
+      bottomNavigationBar: _BottomNavBar(
+        selectedIndex: selectedIndex,
+        l10n: l10n,
+      ),
     );
   }
 }
 
 class _BottomNavBar extends StatelessWidget {
   final int selectedIndex;
-  const _BottomNavBar({required this.selectedIndex});
+  final dynamic l10n;
+
+  const _BottomNavBar({
+    required this.selectedIndex,
+    required this.l10n,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final navBg = theme.colorScheme.surface;
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.08);
+
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: navBg,
         border: Border(
-          top: BorderSide(color: AppColors.glassBorder, width: 1),
+          top: BorderSide(color: borderColor, width: 1),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
             blurRadius: 20,
             offset: const Offset(0, -5),
           ),
@@ -67,26 +84,26 @@ class _BottomNavBar extends StatelessWidget {
             children: [
               _NavItem(
                 icon: Icons.home_rounded,
-                label: 'Ana Sayfa',
+                label: l10n.navHome,
                 isSelected: selectedIndex == 0,
                 onTap: () => context.go(AppRoutes.home),
               ),
               _NavItem(
                 icon: Icons.history_rounded,
-                label: 'Geçmiş',
+                label: l10n.navHistory,
                 isSelected: selectedIndex == 1,
                 onTap: () => context.go(AppRoutes.history),
               ),
               const SizedBox(width: 64), // FAB alanı
               _NavItem(
                 icon: Icons.receipt_long_rounded,
-                label: 'Tarife',
+                label: l10n.navTariff,
                 isSelected: selectedIndex == 2,
                 onTap: () => context.go(AppRoutes.tariff),
               ),
               _NavItem(
                 icon: Icons.person_rounded,
-                label: 'Profil',
+                label: l10n.navProfile,
                 isSelected: selectedIndex == 3,
                 onTap: () => context.go(AppRoutes.profile),
               ),
@@ -113,6 +130,12 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final selectedColor = theme.colorScheme.secondary;
+    final unselectedColor = theme.brightness == Brightness.dark
+        ? const Color(0xFF475569)
+        : const Color(0xFF94A3B8);
+
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -121,7 +144,7 @@ class _NavItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: isSelected
             ? BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.15),
+                color: theme.colorScheme.primary.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               )
             : null,
@@ -130,7 +153,7 @@ class _NavItem extends StatelessWidget {
           children: [
             Icon(
               icon,
-              color: isSelected ? AppColors.accent : AppColors.textMuted,
+              color: isSelected ? selectedColor : unselectedColor,
               size: 24,
             ),
             const SizedBox(height: 4),
@@ -139,7 +162,7 @@ class _NavItem extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isSelected ? AppColors.accent : AppColors.textMuted,
+                color: isSelected ? selectedColor : unselectedColor,
               ),
             ),
           ],

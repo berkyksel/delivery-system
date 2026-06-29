@@ -209,18 +209,22 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final l10n = ref.watch(appL10nProvider);
+
     return Scaffold(
-      backgroundColor: AppColors.bgDark,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Row(
+        title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.flash_on_rounded, color: AppColors.warning, size: 18),
-            SizedBox(width: 6),
-            Text('Hızlı Teklif'),
+            const Icon(Icons.flash_on_rounded, color: AppColors.warning, size: 18),
+            const SizedBox(width: 6),
+            Text(l10n.quickQuoteTitle),
           ],
         ),
-        backgroundColor: AppColors.bgDark,
+        backgroundColor: theme.scaffoldBackgroundColor,
         leading: IconButton(
           icon: const Icon(Icons.close_rounded),
           onPressed: () => Navigator.of(context).pop(),
@@ -240,16 +244,17 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
                 border: Border.all(
                     color: AppColors.warning.withValues(alpha: 0.2)),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.flash_on_rounded,
+                  const Icon(Icons.flash_on_rounded,
                       color: AppColors.warning, size: 16),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Hızlı Teklif: Şirket adı girmeden, sadece tarife ve adres bilgisiyle anında PDF oluşturur.',
+                      l10n.quickQuoteBanner,
                       style: TextStyle(
-                          color: AppColors.textSecondary, fontSize: 12),
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontSize: 12),
                     ),
                   ),
                 ],
@@ -260,16 +265,18 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
 
             // Teklif Sahibi
             _buildCard(
-              'TEKLİF SAHİBİ',
+              l10n.quickQuoteOwner,
               Icons.person_rounded,
+              theme,
+              isDark,
               [
                 TextFormField(
                   controller: _ownerCtrl,
-                  style: const TextStyle(color: AppColors.textPrimary),
-                  decoration: const InputDecoration(
-                    labelText: 'İsim / Referans (Opsiyonel)',
-                    prefixIcon: Icon(Icons.person_outline_rounded),
-                    helperText: 'PDF\'de müşteri adı olarak görünür',
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                  decoration: InputDecoration(
+                    labelText: l10n.quickQuoteOwnerLabel,
+                    prefixIcon: const Icon(Icons.person_outline_rounded),
+                    helperText: l10n.quickQuoteOwnerHelper,
                   ),
                 ),
               ],
@@ -279,8 +286,10 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
 
             // Dil
             _buildCard(
-              'TEKLİF DİLİ',
+              l10n.quickQuoteLanguage,
               Icons.translate_rounded,
+              theme,
+              isDark,
               [
                 Wrap(
                   spacing: 8,
@@ -301,7 +310,9 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
                           border: Border.all(
                             color: isSel
                                 ? AppColors.primary
-                                : AppColors.glassBorder,
+                                : isDark
+                                    ? Colors.white.withValues(alpha: 0.1)
+                                    : Colors.black.withValues(alpha: 0.08),
                             width: isSel ? 1.5 : 1,
                           ),
                         ),
@@ -315,8 +326,8 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
                               lang.label,
                               style: TextStyle(
                                 color: isSel
-                                    ? AppColors.textPrimary
-                                    : AppColors.textSecondary,
+                                    ? theme.colorScheme.onSurface
+                                    : theme.colorScheme.onSurfaceVariant,
                                 fontSize: 12,
                                 fontWeight: isSel
                                     ? FontWeight.w600
@@ -336,15 +347,17 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
 
             // Tarife Modu
             _buildCard(
-              'TARİFE MODU',
+              l10n.quickQuoteTariffMode,
               Icons.calculate_rounded,
+              theme,
+              isDark,
               [
                 Row(
                   children: [
                     for (final m in [
-                      (TariffMode.havenBased, 'Haven', Icons.anchor_rounded),
-                      (TariffMode.kmZone, 'Km Aralık', Icons.route_rounded),
-                      (TariffMode.perKm, 'Km Başı', Icons.straighten_rounded),
+                      (TariffMode.havenBased, l10n.modeHaven, Icons.anchor_rounded),
+                      (TariffMode.kmZone, l10n.modeKmZone, Icons.route_rounded),
+                      (TariffMode.perKm, l10n.modePerKm, Icons.straighten_rounded),
                     ])
                       Expanded(
                         child: Padding(
@@ -368,7 +381,9 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
                                 border: Border.all(
                                   color: _tariffMode == m.$1
                                       ? AppColors.primary
-                                      : AppColors.glassBorder,
+                                      : isDark
+                                          ? Colors.white.withValues(alpha: 0.1)
+                                          : Colors.black.withValues(alpha: 0.08),
                                 ),
                               ),
                               child: Column(
@@ -377,7 +392,7 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
                                       size: 18,
                                       color: _tariffMode == m.$1
                                           ? AppColors.primary
-                                          : AppColors.textMuted),
+                                          : theme.colorScheme.onSurfaceVariant),
                                   const SizedBox(height: 4),
                                   Text(
                                     m.$2,
@@ -385,8 +400,8 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
                                       fontSize: 10,
                                       fontWeight: FontWeight.w600,
                                       color: _tariffMode == m.$1
-                                          ? AppColors.textPrimary
-                                          : AppColors.textMuted,
+                                          ? theme.colorScheme.onSurface
+                                          : theme.colorScheme.onSurfaceVariant,
                                     ),
                                     textAlign: TextAlign.center,
                                   ),
@@ -405,8 +420,10 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
 
             // Haven + Konum + Mesafe
             _buildCard(
-              'HEDEF HAVEN & KONUM',
+              l10n.quickQuoteHavenLocation,
               Icons.anchor_rounded,
+              theme,
+              isDark,
               [
                 // Kıyı Seçici
                 Row(
@@ -438,7 +455,9 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
                                   ? (side == PortSide.rechteroever
                                       ? AppColors.rechteroever
                                       : AppColors.linkeroever)
-                                  : AppColors.glassBorder,
+                                  : isDark
+                                      ? Colors.white.withValues(alpha: 0.1)
+                                      : Colors.black.withValues(alpha: 0.08),
                               width: isSel ? 2 : 1,
                             ),
                           ),
@@ -450,8 +469,8 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: isSel
-                                      ? AppColors.textPrimary
-                                      : AppColors.textSecondary,
+                                      ? theme.colorScheme.onSurface
+                                      : theme.colorScheme.onSurfaceVariant,
                                 ),
                               ),
                               Text(
@@ -459,8 +478,8 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
                                 style: TextStyle(
                                   fontSize: 10,
                                   color: isSel
-                                      ? AppColors.textSecondary
-                                      : AppColors.textMuted,
+                                      ? theme.colorScheme.onSurfaceVariant
+                                      : theme.colorScheme.onSurfaceVariant,
                                 ),
                               ),
                             ],
@@ -475,23 +494,23 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
                   controller: _havenCtrl,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurface,
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
                   ),
-                  decoration: const InputDecoration(
-                    labelText: 'Haven Numarası (1-2000)',
-                    prefixIcon: Icon(Icons.anchor_rounded),
+                  decoration: InputDecoration(
+                    labelText: l10n.generalHavenNumber,
+                    prefixIcon: const Icon(Icons.anchor_rounded),
                   ),
                   onChanged: (_) => _calculateTariff(),
                   validator: (v) {
                     if (v == null || v.isEmpty) {
-                      return 'Haven numarası zorunludur';
+                      return l10n.generalHavenRequired;
                     }
                     final n = int.tryParse(v);
                     if (n == null || !TariffService.isValidHaven(n)) {
-                      return 'Geçersiz haven';
+                      return l10n.generalInvalidHaven;
                     }
                     return null;
                   },
@@ -502,21 +521,21 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
                     controller: _distanceKmCtrl,
                     keyboardType: const TextInputType.numberWithOptions(
                         decimal: true),
-                    style: const TextStyle(color: AppColors.textPrimary),
-                    decoration: const InputDecoration(
-                      labelText: 'Mesafe (km)',
-                      prefixIcon: Icon(Icons.route_rounded),
+                    style: TextStyle(color: theme.colorScheme.onSurface),
+                    decoration: InputDecoration(
+                      labelText: l10n.generalDistance,
+                      prefixIcon: const Icon(Icons.route_rounded),
                       suffixText: 'km',
                     ),
                     onChanged: (_) => _calculateTariff(),
                     validator: (v) {
                       if (_tariffMode != TariffMode.havenBased) {
                         if (v == null || v.isEmpty) {
-                          return 'Mesafe zorunludur';
+                          return l10n.generalDistanceRequired;
                         }
                         final km = double.tryParse(v.replaceAll(',', '.'));
                         if (km == null || km <= 0) {
-                          return 'Geçerli km girin';
+                          return l10n.generalInvalidKm;
                         }
                       }
                       return null;
@@ -539,28 +558,33 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
 
             // Güzergah
             _buildCard(
-              'GÜZERGAH (Opsiyonel)',
+              l10n.quickQuoteRoute,
               Icons.alt_route_rounded,
+              theme,
+              isDark,
               [
                 _routeField(
                   controller: _pickupHavenCtrl,
-                  label: 'Konşimentoya Alınacak Liman',
+                  label: l10n.generalPickupHaven,
                   icon: Icons.anchor_rounded,
                   color: AppColors.rechteroever,
+                  theme: theme,
                 ),
                 const SizedBox(height: 8),
                 _routeField(
                   controller: _deliveryAddressCtrl,
-                  label: 'Boşaltma / Yükleme Adresi',
+                  label: l10n.generalDeliveryAddress,
                   icon: Icons.location_on_rounded,
                   color: AppColors.accent,
+                  theme: theme,
                 ),
                 const SizedBox(height: 8),
                 _routeField(
                   controller: _returnHavenCtrl,
-                  label: 'Geri Verilecek Liman',
+                  label: l10n.generalReturnHaven,
                   icon: Icons.anchor_rounded,
                   color: AppColors.success,
+                  theme: theme,
                 ),
               ],
             ).animate().fadeIn(delay: 240.ms).slideY(begin: 0.1),
@@ -569,31 +593,34 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
 
             // TIR
             _buildCard(
-              'TIR MODELİ (Opsiyonel)',
+              l10n.quickQuoteTruckModel,
               Icons.local_shipping_rounded,
+              theme,
+              isDark,
               [
                 DropdownButtonFormField<TruckModel>(
                   value: _selectedTruck,
-                  dropdownColor: AppColors.bgCard,
-                  style: const TextStyle(
-                      color: AppColors.textPrimary, fontSize: 13),
-                  decoration: const InputDecoration(
-                    labelText: 'TIR Modeli Seçin',
-                    prefixIcon: Icon(Icons.local_shipping_rounded),
+                  dropdownColor: theme.colorScheme.surface,
+                  style: TextStyle(
+                      color: theme.colorScheme.onSurface, fontSize: 13),
+                  decoration: InputDecoration(
+                    labelText: l10n.generalSelectTruck,
+                    prefixIcon: const Icon(Icons.local_shipping_rounded),
                   ),
                   items: [
-                    const DropdownMenuItem(
+                    DropdownMenuItem(
                       value: null,
-                      child: Text('— Seçilmedi —',
-                          style: TextStyle(color: AppColors.textMuted)),
+                      child: Text(l10n.generalNone,
+                          style: TextStyle(
+                              color: theme.colorScheme.onSurfaceVariant)),
                     ),
                     ...TruckCatalog.models.map(
                       (t) => DropdownMenuItem(
                         value: t,
                         child: Text(
                           '${t.fullName} (${t.fuelConsumptionPer100km} L/100km)',
-                          style: const TextStyle(
-                              color: AppColors.textPrimary),
+                          style: TextStyle(
+                              color: theme.colorScheme.onSurface),
                         ),
                       ),
                     ),
@@ -610,8 +637,10 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
 
             // Dizel
             _buildCard(
-              'DİZEL TOESLAG (Opsiyonel)',
+              l10n.quickQuoteDiesel,
               Icons.local_gas_station_rounded,
+              theme,
+              isDark,
               [
                 Row(
                   children: [
@@ -621,8 +650,8 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
                         keyboardType:
                             const TextInputType.numberWithOptions(
                                 decimal: true),
-                        style: const TextStyle(
-                            color: AppColors.textPrimary, fontSize: 18),
+                        style: TextStyle(
+                            color: theme.colorScheme.onSurface, fontSize: 18),
                         decoration: const InputDecoration(
                           labelText: 'Dizel Toeslag %',
                           prefixIcon: Icon(
@@ -680,7 +709,7 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
             ElevatedButton.icon(
               onPressed: _generateQuote,
               icon: const Icon(Icons.picture_as_pdf_rounded),
-              label: const Text('PDF Teklif Oluştur'),
+              label: Text(l10n.quickQuoteGenerate),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.warning,
                 foregroundColor: Colors.black87,
@@ -702,13 +731,17 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
     );
   }
 
-  Widget _buildCard(String title, IconData icon, List<Widget> children) {
+  Widget _buildCard(String title, IconData icon, ThemeData theme, bool isDark, List<Widget> children) {
+    final cardBg = theme.colorScheme.surface;
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.08);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.glassBorder),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -719,10 +752,10 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
               const SizedBox(width: 8),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textSecondary,
+                  color: theme.colorScheme.onSurfaceVariant,
                   letterSpacing: 1.0,
                 ),
               ),
@@ -740,10 +773,11 @@ class _QuickQuoteScreenState extends ConsumerState<QuickQuoteScreen> {
     required String label,
     required IconData icon,
     required Color color,
+    required ThemeData theme,
   }) {
     return TextFormField(
       controller: controller,
-      style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+      style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 13),
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: color, size: 18),

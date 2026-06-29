@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/locale_provider.dart';
 import '../../../data/models/delivery_model.dart';
 import '../../../data/services/tariff_service.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   // Mock data - Firebase entegrasyonu eklenince kaldırılacak
@@ -60,33 +62,36 @@ class HomeScreen extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final totalEarnings = _mockDeliveries
         .where((d) => d.status == DeliveryStatus.completed)
         .fold(0.0, (sum, d) => sum + d.totalFee);
-    final tunnelCount = _mockDeliveries
-        .where((d) => d.tunnelUsed)
-        .length;
+    final tunnelCount = _mockDeliveries.where((d) => d.tunnelUsed).length;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final l10n = ref.watch(appL10nProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.bgDark,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: CustomScrollView(
         slivers: [
-          _buildAppBar(context),
+          _buildAppBar(context, theme, l10n),
           SliverPadding(
             padding: const EdgeInsets.all(16),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                _buildStatsRow(totalEarnings, tunnelCount),
+                _buildStatsRow(totalEarnings, tunnelCount, theme, isDark, l10n),
                 const SizedBox(height: 20),
-                _buildPortSideCard(),
+                _buildPortSideCard(theme, isDark, l10n),
                 const SizedBox(height: 20),
-                _buildRecentDeliveriesHeader(context),
+                _buildRecentDeliveriesHeader(context, theme, l10n),
                 const SizedBox(height: 12),
                 ..._mockDeliveries.asMap().entries.map(
-                  (entry) => _buildDeliveryCard(entry.value, entry.key).animate()
-                    .fadeIn(delay: (entry.key * 80).ms)
-                    .slideX(begin: 0.1, end: 0),
+                  (entry) => _buildDeliveryCard(
+                          entry.value, entry.key, theme, isDark)
+                      .animate()
+                      .fadeIn(delay: (entry.key * 80).ms)
+                      .slideX(begin: 0.1, end: 0),
                 ),
                 const SizedBox(height: 80),
               ]),
@@ -97,12 +102,12 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAppBar(BuildContext context) {
+  Widget _buildAppBar(BuildContext context, ThemeData theme, dynamic l10n) {
     return SliverAppBar(
       expandedHeight: 140,
       floating: false,
       pinned: true,
-      backgroundColor: AppColors.bgDark,
+      backgroundColor: theme.scaffoldBackgroundColor,
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: const BoxDecoration(
@@ -114,7 +119,8 @@ class HomeScreen extends StatelessWidget {
           ),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -126,15 +132,15 @@ class HomeScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Günaydın! 👋',
+                            l10n.homeGreeting,
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.7),
                               fontSize: 14,
                             ),
                           ),
-                          const Text(
-                            'Hoş geldiniz',
-                            style: TextStyle(
+                          Text(
+                            l10n.homeWelcome,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 24,
                               fontWeight: FontWeight.w700,
@@ -177,53 +183,72 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatsRow(double totalEarnings, int tunnelCount) {
+  Widget _buildStatsRow(
+    double totalEarnings,
+    int tunnelCount,
+    ThemeData theme,
+    bool isDark,
+    dynamic l10n,
+  ) {
     return Row(
       children: [
         Expanded(
           child: _StatCard(
             icon: Icons.local_shipping_rounded,
-            label: 'Bugün',
+            label: l10n.homeToday,
             value: '${_mockDeliveries.length}',
-            subtitle: 'teslimat',
+            subtitle: l10n.homeDelivery,
             color: AppColors.primary,
+            theme: theme,
+            isDark: isDark,
           ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.2, end: 0),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: _StatCard(
             icon: Icons.euro_rounded,
-            label: 'Kazanç',
+            label: l10n.homeEarnings,
             value: totalEarnings.toStringAsFixed(2),
             subtitle: 'EUR',
             color: AppColors.success,
-          ).animate().fadeIn(delay: 80.ms, duration: 400.ms).slideY(begin: 0.2, end: 0),
+            theme: theme,
+            isDark: isDark,
+          )
+              .animate()
+              .fadeIn(delay: 80.ms, duration: 400.ms)
+              .slideY(begin: 0.2, end: 0),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: _StatCard(
             icon: Icons.alt_route,
-            label: 'Tünel',
+            label: l10n.homeTunnel,
             value: '$tunnelCount',
-            subtitle: 'geçiş',
+            subtitle: l10n.homeTunnelPassage,
             color: AppColors.tunnel,
-          ).animate().fadeIn(delay: 160.ms, duration: 400.ms).slideY(begin: 0.2, end: 0),
+            theme: theme,
+            isDark: isDark,
+          )
+              .animate()
+              .fadeIn(delay: 160.ms, duration: 400.ms)
+              .slideY(begin: 0.2, end: 0),
         ),
       ],
     );
   }
 
-  Widget _buildPortSideCard() {
+  Widget _buildPortSideCard(ThemeData theme, bool isDark, dynamic l10n) {
+    final cardBg = theme.colorScheme.surface;
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.08);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1A2236), Color(0xFF111827)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.glassBorder),
+        border: Border.all(color: borderColor),
       ),
       child: Row(
         children: [
@@ -240,35 +265,39 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Mevcut Konum',
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  l10n.homeCurrentLocation,
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurfaceVariant),
                 ),
                 Text(
                   'Rechteroever (Sağ Kıyı)',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
               ],
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: AppColors.rechteroever.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.rechteroever.withValues(alpha: 0.3)),
+              border: Border.all(
+                  color: AppColors.rechteroever.withValues(alpha: 0.3)),
             ),
-            child: const Text(
-              'Değiştir',
-              style: TextStyle(
+            child: Text(
+              l10n.homeChange,
+              style: const TextStyle(
                 color: AppColors.rechteroever,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
@@ -280,41 +309,48 @@ class HomeScreen extends StatelessWidget {
     ).animate().fadeIn(delay: 240.ms, duration: 400.ms);
   }
 
-  Widget _buildRecentDeliveriesHeader(BuildContext context) {
+  Widget _buildRecentDeliveriesHeader(
+      BuildContext context, ThemeData theme, dynamic l10n) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text(
-          'Son Teslimatlar',
+        Text(
+          l10n.homeRecentDeliveries,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+            color: theme.colorScheme.onSurface,
           ),
         ),
         TextButton(
           onPressed: () => context.go(AppRoutes.history),
-          child: const Text(
-            'Tümünü Gör',
-            style: TextStyle(color: AppColors.accent, fontSize: 13),
+          child: Text(
+            l10n.homeSeeAll,
+            style: const TextStyle(color: AppColors.accent, fontSize: 13),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildDeliveryCard(DeliveryModel delivery, int index) {
+  Widget _buildDeliveryCard(
+      DeliveryModel delivery, int index, ThemeData theme, bool isDark) {
     final sideColor = delivery.destinationSide == PortSide.rechteroever
         ? AppColors.rechteroever
         : AppColors.linkeroever;
+
+    final cardBg = theme.colorScheme.surface;
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.08);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: cardBg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.glassBorder),
+        border: Border.all(color: borderColor),
       ),
       child: Row(
         children: [
@@ -338,9 +374,9 @@ class HomeScreen extends StatelessWidget {
               children: [
                 Text(
                   delivery.companyName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: theme.colorScheme.onSurface,
                     fontSize: 14,
                   ),
                 ),
@@ -349,8 +385,8 @@ class HomeScreen extends StatelessWidget {
                   children: [
                     Text(
                       'Haven ${delivery.havenNumber}',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
                         fontSize: 12,
                       ),
                     ),
@@ -358,8 +394,8 @@ class HomeScreen extends StatelessWidget {
                     Container(
                       width: 3,
                       height: 3,
-                      decoration: const BoxDecoration(
-                        color: AppColors.textMuted,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.onSurfaceVariant,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -383,9 +419,9 @@ class HomeScreen extends StatelessWidget {
             children: [
               Text(
                 '${delivery.totalFee.toStringAsFixed(2)} €',
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                  color: theme.colorScheme.onSurface,
                   fontSize: 15,
                 ),
               ),
@@ -405,6 +441,8 @@ class _StatCard extends StatelessWidget {
   final String value;
   final String subtitle;
   final Color color;
+  final ThemeData theme;
+  final bool isDark;
 
   const _StatCard({
     required this.icon,
@@ -412,16 +450,23 @@ class _StatCard extends StatelessWidget {
     required this.value,
     required this.subtitle,
     required this.color,
+    required this.theme,
+    required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
+    final cardBg = theme.colorScheme.surface;
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.08);
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: cardBg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.glassBorder),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -445,9 +490,9 @@ class _StatCard extends StatelessWidget {
           ),
           Text(
             subtitle,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
-              color: AppColors.textSecondary,
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -474,7 +519,7 @@ class _StatusBadge extends StatelessWidget {
         color = AppColors.error;
         break;
       default:
-        color = AppColors.textMuted;
+        color = AppColors.info;
     }
 
     return Container(

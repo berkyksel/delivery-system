@@ -28,38 +28,43 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     role: UserRole.driver,
     currentSide: 'rechteroever',
   );
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final bgColor = theme.scaffoldBackgroundColor;
+
     return Scaffold(
-      backgroundColor: AppColors.bgDark,
+      backgroundColor: bgColor,
       body: CustomScrollView(
         slivers: [
-          _buildProfileHeader(),
+          _buildProfileHeader(theme, isDark),
           SliverPadding(
             padding: const EdgeInsets.all(16),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                _buildCurrentSideCard()
+                _buildCurrentSideCard(theme, isDark)
                     .animate()
                     .fadeIn(duration: 400.ms)
                     .slideY(begin: 0.1),
                 const SizedBox(height: 14),
-                _buildPersonalInfoCard()
+                _buildPersonalInfoCard(theme, isDark)
                     .animate()
                     .fadeIn(delay: 100.ms, duration: 400.ms)
                     .slideY(begin: 0.1),
                 const SizedBox(height: 14),
-                _buildVehicleCard()
+                _buildVehicleCard(theme, isDark)
                     .animate()
                     .fadeIn(delay: 200.ms, duration: 400.ms)
                     .slideY(begin: 0.1),
                 const SizedBox(height: 14),
-                _buildPreferencesCard()
+                _buildPreferencesCard(theme, isDark)
                     .animate()
                     .fadeIn(delay: 300.ms, duration: 400.ms)
                     .slideY(begin: 0.1),
                 const SizedBox(height: 14),
-                _buildLogoutButton()
+                _buildLogoutButton(theme, isDark)
                     .animate()
                     .fadeIn(delay: 400.ms, duration: 400.ms),
                 const SizedBox(height: 80),
@@ -71,12 +76,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildProfileHeader() {
+  Widget _buildProfileHeader(ThemeData theme, bool isDark) {
     return SliverAppBar(
       expandedHeight: 200,
       pinned: true,
       automaticallyImplyLeading: false,
-      backgroundColor: AppColors.bgDark,
+      backgroundColor: theme.scaffoldBackgroundColor,
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: const BoxDecoration(
@@ -132,7 +137,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.accent,
                           shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.bgDark, width: 2),
+                          border: Border.all(
+                            color: theme.scaffoldBackgroundColor,
+                            width: 2,
+                          ),
                         ),
                         child: const Icon(Icons.camera_alt_rounded,
                             size: 13, color: Colors.white),
@@ -179,18 +187,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildCurrentSideCard() {
+  Widget _buildCurrentSideCard(ThemeData theme, bool isDark) {
     final isRight = _profile.currentSide == 'rechteroever';
     final currentSide =
         isRight ? PortSide.rechteroever : PortSide.linkeroever;
     final sideColor =
         isRight ? AppColors.rechteroever : AppColors.linkeroever;
+    final l10n = ref.watch(appL10nProvider);
+
+    final cardBg = theme.colorScheme.surface;
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.08);
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [sideColor.withValues(alpha: 0.12), AppColors.bgCard],
+          colors: [sideColor.withValues(alpha: 0.12), cardBg],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -204,12 +218,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             children: [
               Icon(Icons.my_location_rounded, size: 14, color: sideColor),
               const SizedBox(width: 8),
-              const Text(
-                'MEVCUt KONUMUM',
+              Text(
+                l10n.profileCurrentLocation,
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textSecondary,
+                  color: theme.colorScheme.onSurfaceVariant,
                   letterSpacing: 1.0,
                 ),
               ),
@@ -234,11 +248,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         right: side == PortSide.rechteroever ? 8 : 0),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
-                      color:
-                          isSelected ? color.withValues(alpha: 0.15) : Colors.transparent,
+                      color: isSelected
+                          ? color.withValues(alpha: 0.15)
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: isSelected ? color : AppColors.glassBorder,
+                        color: isSelected ? color : borderColor,
                         width: isSelected ? 2 : 1,
                       ),
                     ),
@@ -248,12 +263,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           side == PortSide.rechteroever
                               ? Icons.chevron_right_rounded
                               : Icons.chevron_left_rounded,
-                          color: isSelected ? color : AppColors.textMuted,
+                          color: isSelected
+                              ? color
+                              : theme.colorScheme.onSurfaceVariant,
                         ),
                         Text(
                           side.dutchName,
                           style: TextStyle(
-                            color: isSelected ? color : AppColors.textMuted,
+                            color: isSelected
+                                ? color
+                                : theme.colorScheme.onSurfaceVariant,
                             fontWeight: isSelected
                                 ? FontWeight.w600
                                 : FontWeight.w400,
@@ -262,8 +281,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                         Text(
                           side.turkishName,
-                          style: const TextStyle(
-                            color: AppColors.textMuted,
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurfaceVariant,
                             fontSize: 10,
                           ),
                         ),
@@ -279,72 +298,88 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildPersonalInfoCard() {
+  Widget _buildPersonalInfoCard(ThemeData theme, bool isDark) {
+    final l10n = ref.watch(appL10nProvider);
     return _buildSection(
-      title: 'KİŞİSEL BİLGİLER',
+      title: l10n.profilePersonalInfo,
       icon: Icons.person_rounded,
+      theme: theme,
+      isDark: isDark,
       children: [
         _InfoTile(
           icon: Icons.badge_rounded,
-          label: 'Ad Soyad',
+          label: l10n.profileFullName,
           value: _profile.fullName,
+          theme: theme,
         ),
         _InfoTile(
           icon: Icons.email_outlined,
-          label: 'E-posta',
+          label: l10n.profileEmail,
           value: _profile.email,
+          theme: theme,
         ),
         if (_profile.phone != null)
           _InfoTile(
             icon: Icons.phone_outlined,
-            label: 'Telefon',
+            label: l10n.profilePhone,
             value: _profile.phone!,
+            theme: theme,
           ),
       ],
     );
   }
 
-  Widget _buildVehicleCard() {
+  Widget _buildVehicleCard(ThemeData theme, bool isDark) {
+    final l10n = ref.watch(appL10nProvider);
     return _buildSection(
-      title: 'ARAÇ BİLGİLERİ',
+      title: l10n.profileVehicleInfo,
       icon: Icons.directions_car_rounded,
+      theme: theme,
+      isDark: isDark,
       children: [
         if (_profile.vehiclePlate != null)
           _InfoTile(
             icon: Icons.confirmation_number_outlined,
-            label: 'Plaka',
+            label: l10n.profilePlate,
             value: _profile.vehiclePlate!,
+            theme: theme,
           ),
         if (_profile.vehicleType != null)
           _InfoTile(
             icon: Icons.local_shipping_rounded,
-            label: 'Araç Tipi',
+            label: l10n.profileVehicleType,
             value: _profile.vehicleType!,
+            theme: theme,
           ),
       ],
     );
   }
 
-  Widget _buildPreferencesCard() {
-    final isDark = ref.watch(themeProvider) == ThemeMode.dark;
+  Widget _buildPreferencesCard(ThemeData theme, bool isDark) {
+    final isDarkMode = ref.watch(themeProvider) == ThemeMode.dark;
     final selectedLang = ref.watch(quoteLanguageProvider);
+    final l10n = ref.watch(appL10nProvider);
 
     return _buildSection(
-      title: 'TERCİHLER',
+      title: l10n.profilePreferences,
       icon: Icons.settings_rounded,
+      theme: theme,
+      isDark: isDark,
       children: [
         // ── Bildirimler ───────────────────────────────────────────────────
         Material(
           color: Colors.transparent,
           child: SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text(
-              'Bildirimler',
-              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+            title: Text(
+              l10n.profileNotifications,
+              style: TextStyle(
+                  color: theme.colorScheme.onSurface, fontSize: 14),
             ),
-            subtitle: const Text(
-              'Teslimat hatırlatmaları',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            subtitle: Text(
+              l10n.profileNotificationsSubtitle,
+              style: TextStyle(
+                  color: theme.colorScheme.onSurfaceVariant, fontSize: 12),
             ),
             value: _profile.notificationsEnabled,
             activeThumbColor: AppColors.accent,
@@ -354,24 +389,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
         const SizedBox(height: 8),
         // ── Tema Seçici ───────────────────────────────────────────────────
-        _buildThemeSelector(isDark),
+        _buildThemeSelector(isDarkMode, theme, l10n),
         const SizedBox(height: 16),
-        // ── Teklif Dili Seçici ────────────────────────────────────────────
-        _buildQuoteLanguageSelector(selectedLang),
+        // ── Uygulama Dili Seçici ─────────────────────────────────────────
+        _buildAppLanguageSelector(selectedLang, theme, isDark, l10n),
       ],
     );
   }
 
-  Widget _buildThemeSelector(bool isDark) {
+  Widget _buildThemeSelector(bool isDarkMode, ThemeData theme, dynamic l10n) {
+    final borderColor = theme.brightness == Brightness.dark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.08);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(bottom: 10),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
           child: Text(
-            'Uygulama Teması',
+            l10n.profileAppTheme,
             style: TextStyle(
-              color: AppColors.textPrimary,
+              color: theme.colorScheme.onSurface,
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
@@ -387,15 +426,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   duration: const Duration(milliseconds: 250),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   decoration: BoxDecoration(
-                    color: isDark
+                    color: isDarkMode
                         ? AppColors.primary.withValues(alpha: 0.2)
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: isDark
+                      color: isDarkMode
                           ? AppColors.primary
-                          : AppColors.glassBorder,
-                      width: isDark ? 1.5 : 1,
+                          : borderColor,
+                      width: isDarkMode ? 1.5 : 1,
                     ),
                   ),
                   child: Column(
@@ -404,21 +443,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       Icon(
                         Icons.dark_mode_rounded,
                         size: 22,
-                        color: isDark
+                        color: isDarkMode
                             ? AppColors.primary
-                            : AppColors.textMuted,
+                            : theme.colorScheme.onSurfaceVariant,
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Koyu',
+                        l10n.profileDark,
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: isDark
+                          fontWeight: isDarkMode
                               ? FontWeight.w700
                               : FontWeight.w400,
-                          color: isDark
-                              ? AppColors.textPrimary
-                              : AppColors.textMuted,
+                          color: isDarkMode
+                              ? theme.colorScheme.onSurface
+                              : theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -435,15 +474,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   duration: const Duration(milliseconds: 250),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   decoration: BoxDecoration(
-                    color: !isDark
+                    color: !isDarkMode
                         ? AppColors.accent.withValues(alpha: 0.12)
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: !isDark
+                      color: !isDarkMode
                           ? AppColors.accent
-                          : AppColors.glassBorder,
-                      width: !isDark ? 1.5 : 1,
+                          : borderColor,
+                      width: !isDarkMode ? 1.5 : 1,
                     ),
                   ),
                   child: Column(
@@ -452,21 +491,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       Icon(
                         Icons.light_mode_rounded,
                         size: 22,
-                        color: !isDark
+                        color: !isDarkMode
                             ? AppColors.accent
-                            : AppColors.textMuted,
+                            : theme.colorScheme.onSurfaceVariant,
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Açık',
+                        l10n.profileLight,
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: !isDark
+                          fontWeight: !isDarkMode
                               ? FontWeight.w700
                               : FontWeight.w400,
-                          color: !isDark
-                              ? AppColors.textPrimary
-                              : AppColors.textMuted,
+                          color: !isDarkMode
+                              ? theme.colorScheme.onSurface
+                              : theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -480,27 +519,36 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildQuoteLanguageSelector(QuoteLanguage selected) {
+  Widget _buildAppLanguageSelector(
+    QuoteLanguage selected,
+    ThemeData theme,
+    bool isDark,
+    dynamic l10n,
+  ) {
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.08);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(bottom: 10),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
           child: Text(
-            'Varsayılan Teklif Dili',
+            l10n.profileAppLanguage,
             style: TextStyle(
-              color: AppColors.textPrimary,
+              color: theme.colorScheme.onSurface,
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
           ),
         ),
-        const Padding(
-          padding: EdgeInsets.only(bottom: 10),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
           child: Text(
-            'Yeni teslimat oluştururken otomatik seçilir',
+            l10n.profileAppLanguageSubtitle,
             style: TextStyle(
-              color: AppColors.textSecondary,
+              color: theme.colorScheme.onSurfaceVariant,
               fontSize: 11,
             ),
           ),
@@ -525,7 +573,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   border: Border.all(
                     color: isSelected
                         ? AppColors.primary
-                        : AppColors.glassBorder,
+                        : borderColor,
                     width: isSelected ? 1.5 : 1,
                   ),
                 ),
@@ -545,19 +593,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             ? FontWeight.w700
                             : FontWeight.w400,
                         color: isSelected
-                            ? AppColors.textPrimary
-                            : AppColors.textMuted,
+                            ? theme.colorScheme.onSurface
+                            : theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    if (isSelected) ...
-                      [
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.check_circle_rounded,
-                          size: 13,
-                          color: AppColors.primary,
-                        ),
-                      ],
+                    if (isSelected) ...[
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        size: 13,
+                        color: AppColors.primary,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -572,13 +619,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     required String title,
     required IconData icon,
     required List<Widget> children,
+    required ThemeData theme,
+    required bool isDark,
   }) {
+    final cardBg = theme.colorScheme.surface;
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.08);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.glassBorder),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -589,10 +643,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               const SizedBox(width: 8),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textSecondary,
+                  color: theme.colorScheme.onSurfaceVariant,
                   letterSpacing: 1.0,
                 ),
               ),
@@ -605,38 +659,41 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildLogoutButton() {
+  Widget _buildLogoutButton(ThemeData theme, bool isDark) {
+    final l10n = ref.watch(appL10nProvider);
     return OutlinedButton.icon(
       onPressed: () {
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
-            backgroundColor: AppColors.bgCard,
-            title: const Text('Çıkış Yap',
-                style: TextStyle(color: AppColors.textPrimary)),
-            content: const Text('Hesabınızdan çıkmak istediğinizden emin misiniz?',
-                style: TextStyle(color: AppColors.textSecondary)),
+            backgroundColor: theme.colorScheme.surface,
+            title: Text(l10n.profileLogout,
+                style: TextStyle(color: theme.colorScheme.onSurface)),
+            content: Text(
+                l10n.profileLogoutConfirm,
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('İptal',
-                    style: TextStyle(color: AppColors.textSecondary)),
+                child: Text(l10n.profileLogoutCancel,
+                    style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant)),
               ),
               TextButton(
                 onPressed: () {
                   Navigator.pop(ctx);
                   // Firebase signOut()
                 },
-                child: const Text('Çıkış Yap',
-                    style: TextStyle(color: AppColors.error)),
+                child: Text(l10n.profileLogout,
+                    style: const TextStyle(color: AppColors.error)),
               ),
             ],
           ),
         );
       },
       icon: const Icon(Icons.logout_rounded, color: AppColors.error),
-      label: const Text('Çıkış Yap',
-          style: TextStyle(color: AppColors.error)),
+      label: Text(l10n.profileLogout,
+          style: const TextStyle(color: AppColors.error)),
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(double.infinity, 52),
         side: BorderSide(color: AppColors.error.withValues(alpha: 0.4)),
@@ -650,11 +707,13 @@ class _InfoTile extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final ThemeData theme;
 
   const _InfoTile({
     required this.icon,
     required this.label,
     required this.value,
+    required this.theme,
   });
 
   @override
@@ -663,22 +722,22 @@ class _InfoTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: AppColors.textMuted),
+          Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 label,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
+                style: TextStyle(
+                  color: theme.colorScheme.onSurfaceVariant,
                   fontSize: 11,
                 ),
               ),
               Text(
                 value,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface,
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),

@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/theme/locale_provider.dart';
 import '../../../data/models/tariff_zone_model.dart';
 
-class TariffScreen extends StatefulWidget {
+class TariffScreen extends ConsumerStatefulWidget {
   const TariffScreen({super.key});
 
   @override
-  State<TariffScreen> createState() => _TariffScreenState();
+  ConsumerState<TariffScreen> createState() => _TariffScreenState();
 }
 
-class _TariffScreenState extends State<TariffScreen>
+class _TariffScreenState extends ConsumerState<TariffScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
@@ -156,26 +158,30 @@ class _TariffScreenState extends State<TariffScreen>
   }
 
   void _showSaveSnack() {
+    final l10n = ref.read(appL10nProvider);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('✓ Tarife kaydedildi'),
+      SnackBar(
+        content: Text(l10n.tariffSaved),
         backgroundColor: AppColors.success,
-        duration: Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final l10n = ref.watch(appL10nProvider);
     return Scaffold(
-      backgroundColor: AppColors.bgDark,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: CustomScrollView(
         slivers: [
           // ── App Bar ─────────────────────────────────────────────────────────
           SliverAppBar(
             expandedHeight: 130,
             pinned: true,
-            backgroundColor: AppColors.bgDark,
+            backgroundColor: theme.scaffoldBackgroundColor,
             automaticallyImplyLeading: false,
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
@@ -193,16 +199,16 @@ class _TariffScreenState extends State<TariffScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        const Text(
-                          'Tarife Yönetimi',
-                          style: TextStyle(
+                        Text(
+                          l10n.tariffTitle,
+                          style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w800,
                             color: Colors.white,
                           ),
                         ),
                         Text(
-                          'Kendi tarifenizi düzenleyin ve kaydedin',
+                          l10n.tariffSubtitle,
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.6),
                             fontSize: 12,
@@ -219,10 +225,10 @@ class _TariffScreenState extends State<TariffScreen>
               indicatorColor: AppColors.accent,
               labelColor: Colors.white,
               unselectedLabelColor: Colors.white54,
-              tabs: const [
-                Tab(icon: Icon(Icons.anchor_rounded, size: 18), text: 'Haven'),
-                Tab(icon: Icon(Icons.route_rounded, size: 18), text: 'Km Aralık'),
-                Tab(icon: Icon(Icons.tune_rounded, size: 18), text: 'Genel'),
+              tabs: [
+                Tab(icon: const Icon(Icons.anchor_rounded, size: 18), text: l10n.tariffTabHaven),
+                Tab(icon: const Icon(Icons.route_rounded, size: 18), text: l10n.tariffTabKmZone),
+                Tab(icon: const Icon(Icons.tune_rounded, size: 18), text: l10n.tariffTabGeneral),
               ],
             ),
           ),
@@ -244,6 +250,8 @@ class _TariffScreenState extends State<TariffScreen>
 
   // ── Haven Tarifeleri Tab ───────────────────────────────────────────────────
   Widget _buildHavenTab() {
+    final theme = Theme.of(context);
+    final l10n = ref.watch(appL10nProvider);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -260,12 +268,12 @@ class _TariffScreenState extends State<TariffScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'HAVEN TARİFELERİ',
+              Text(
+                l10n.tariffTabHaven.toUpperCase(),
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textSecondary,
+                  color: theme.colorScheme.onSurfaceVariant,
                   letterSpacing: 1.2,
                 ),
               ),
@@ -276,13 +284,13 @@ class _TariffScreenState extends State<TariffScreen>
                       onPressed: () =>
                           setState(() => _isEditingHaven = false),
                       icon: const Icon(Icons.close_rounded, size: 14),
-                      label: const Text('İptal', style: TextStyle(fontSize: 12)),
+                      label: Text(l10n.tariffCancel, style: const TextStyle(fontSize: 12)),
                     ),
                     ElevatedButton.icon(
                       onPressed: _saveHavenRates,
                       icon: const Icon(Icons.save_rounded, size: 14),
-                      label: const Text('Kaydet',
-                          style: TextStyle(fontSize: 12)),
+                      label: Text(l10n.tariffSave,
+                          style: const TextStyle(fontSize: 12)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.success,
                         minimumSize: const Size(0, 32),
@@ -345,6 +353,11 @@ class _TariffScreenState extends State<TariffScreen>
 
   // ── Km Aralık Tab ─────────────────────────────────────────────────────────
   Widget _buildKmZoneTab() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.08);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -420,9 +433,9 @@ class _TariffScreenState extends State<TariffScreen>
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.bgCard,
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.glassBorder),
+              border: Border.all(color: borderColor),
             ),
             child: Column(
               children: [
@@ -465,7 +478,7 @@ class _TariffScreenState extends State<TariffScreen>
                   child: ElevatedButton.icon(
                     onPressed: _saveKmZones,
                     icon: const Icon(Icons.save_rounded, size: 18),
-                    label: const Text('Km Tarifesini Kaydet'),
+                    label: Text(ref.read(appL10nProvider).tariffSaveKm),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.success,
                       minimumSize: const Size(0, 46),
@@ -484,17 +497,20 @@ class _TariffScreenState extends State<TariffScreen>
 
   // ── Genel Tab ─────────────────────────────────────────────────────────────
   Widget _buildGeneralTab() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final l10n = ref.watch(appL10nProvider);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'GENEL ÜCRETLER',
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: AppColors.textSecondary,
+              color: theme.colorScheme.onSurfaceVariant,
               letterSpacing: 1.2,
             ),
           ).animate().fadeIn(duration: 400.ms),
@@ -502,9 +518,13 @@ class _TariffScreenState extends State<TariffScreen>
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.bgCard,
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.glassBorder),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.black.withValues(alpha: 0.08),
+              ),
             ),
             child: Column(
               children: [
@@ -548,7 +568,7 @@ class _TariffScreenState extends State<TariffScreen>
                   child: ElevatedButton.icon(
                     onPressed: _saveGeneralFees,
                     icon: const Icon(Icons.save_rounded, size: 18),
-                    label: const Text('Genel Ücretleri Kaydet'),
+                    label: Text(l10n.tariffSaveGeneral),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.success,
                       minimumSize: const Size(0, 46),
@@ -575,11 +595,11 @@ class _TariffScreenState extends State<TariffScreen>
                 const Icon(Icons.restore_rounded,
                     color: AppColors.error, size: 20),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Tüm tarifeleri fabrika değerlerine sıfırla',
+                    l10n.tariffResetAll,
                     style: TextStyle(
-                        color: AppColors.textSecondary, fontSize: 13),
+                        color: theme.colorScheme.onSurfaceVariant, fontSize: 13),
                   ),
                 ),
                 TextButton(
@@ -587,19 +607,17 @@ class _TariffScreenState extends State<TariffScreen>
                     showDialog(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        backgroundColor: AppColors.bgCard,
-                        title: const Text('Tarifeyi Sıfırla',
-                            style:
-                                TextStyle(color: AppColors.textPrimary)),
-                        content: const Text(
-                          'Tüm özel tarifelar silinecek ve varsayılan değerlere dönülecek.',
-                          style:
-                              TextStyle(color: AppColors.textSecondary),
+                        backgroundColor: theme.colorScheme.surface,
+                        title: Text(l10n.tariffReset,
+                            style: TextStyle(color: theme.colorScheme.onSurface)),
+                        content: Text(
+                          l10n.tariffResetConfirm,
+                          style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                         ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.of(ctx).pop(),
-                            child: const Text('İptal'),
+                            child: Text(l10n.tariffCancel),
                           ),
                           ElevatedButton(
                             onPressed: () {
@@ -618,14 +636,14 @@ class _TariffScreenState extends State<TariffScreen>
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.error,
                             ),
-                            child: const Text('Sıfırla'),
+                            child: Text(l10n.tariffDoReset),
                           ),
                         ],
                       ),
                     );
                   },
-                  child: const Text('Sıfırla',
-                      style: TextStyle(color: AppColors.error)),
+                  child: Text(l10n.tariffDoReset,
+                      style: const TextStyle(color: AppColors.error)),
                 ),
               ],
             ),
@@ -639,13 +657,14 @@ class _TariffScreenState extends State<TariffScreen>
 
   // ─── Widget Yardımcılar ──────────────────────────────────────────────────
   Widget _buildTunnelCard() {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
             AppColors.tunnel.withValues(alpha: 0.15),
-            AppColors.bgCard,
+            theme.colorScheme.surface,
           ],
         ),
         borderRadius: BorderRadius.circular(16),
@@ -707,15 +726,20 @@ class _TariffScreenState extends State<TariffScreen>
   }) {
     final sideColor = _getHavenRangeColor(range);
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.08);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
             color: isEditing
                 ? AppColors.accent.withValues(alpha: 0.3)
-                : AppColors.glassBorder),
+                : borderColor),
       ),
       child: Row(
         children: [
@@ -862,10 +886,11 @@ class _TariffScreenState extends State<TariffScreen>
     ];
     final color = colors[index % colors.length];
 
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
@@ -917,14 +942,19 @@ class _TariffScreenState extends State<TariffScreen>
   }
 
   Widget _buildZoneInfoCard() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.08);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.glassBorder),
+        border: Border.all(color: borderColor),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -932,12 +962,12 @@ class _TariffScreenState extends State<TariffScreen>
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: AppColors.textSecondary,
+              color: theme.colorScheme.onSurfaceVariant,
               letterSpacing: 1.2,
             ),
           ),
-          SizedBox(height: 12),
-          Row(
+          const SizedBox(height: 12),
+          const Row(
             children: [
               Expanded(
                 child: _ZoneInfo(
