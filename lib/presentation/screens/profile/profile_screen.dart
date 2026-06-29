@@ -84,9 +84,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       backgroundColor: theme.scaffoldBackgroundColor,
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF0D47A1), Color(0xFF0A0E1A)],
+              colors: isDark
+                  ? const [Color(0xFF0D47A1), Color(0xFF0A0E1A)]
+                  : const [Color(0xFF1565C0), Color(0xFF42A5F5)],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),

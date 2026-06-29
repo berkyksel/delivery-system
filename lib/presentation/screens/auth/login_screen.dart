@@ -37,41 +37,48 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.darkGradient),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const SizedBox(height: 60),
-                // Logo & Brand
-                _buildBrand()
-                    .animate()
-                    .fadeIn(duration: 600.ms)
-                    .slideY(begin: -0.2, end: 0),
-                const SizedBox(height: 48),
-                // Form Card
-                _buildFormCard()
-                    .animate()
-                    .fadeIn(delay: 200.ms, duration: 600.ms)
-                    .slideY(begin: 0.2, end: 0),
-                const SizedBox(height: 24),
-                // Register Link
-                _buildRegisterLink()
-                    .animate()
-                    .fadeIn(delay: 400.ms, duration: 600.ms),
-              ],
-            ),
-          ),
-        ),
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    Widget body = SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const SizedBox(height: 60),
+          // Logo & Brand
+          _buildBrand(theme, isDark)
+              .animate()
+              .fadeIn(duration: 600.ms)
+              .slideY(begin: -0.2, end: 0),
+          const SizedBox(height: 48),
+          // Form Card
+          _buildFormCard(theme, isDark)
+              .animate()
+              .fadeIn(delay: 200.ms, duration: 600.ms)
+              .slideY(begin: 0.2, end: 0),
+          const SizedBox(height: 24),
+          // Register Link
+          _buildRegisterLink(theme)
+              .animate()
+              .fadeIn(delay: 400.ms, duration: 600.ms),
+        ],
       ),
+    );
+
+    return Scaffold(
+      body: isDark
+          ? Container(
+              decoration: const BoxDecoration(gradient: AppColors.darkGradient),
+              child: SafeArea(child: body),
+            )
+          : SafeArea(child: body),
     );
   }
 
-  Widget _buildBrand() {
+  Widget _buildBrand(ThemeData theme, bool isDark) {
+    final titleColor = isDark ? AppColors.textPrimary : const Color(0xFF0F172A);
+    final subtitleColor = isDark ? AppColors.textSecondary : const Color(0xFF475569);
     return Column(
       children: [
         Container(
@@ -95,21 +102,21 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'Anvers Liman',
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w800,
-            color: AppColors.textPrimary,
+            color: titleColor,
             letterSpacing: -0.5,
           ),
         ),
         const SizedBox(height: 4),
-        const Text(
+        Text(
           'Teslimat Yönetim Sistemi',
           style: TextStyle(
             fontSize: 14,
-            color: AppColors.textSecondary,
+            color: subtitleColor,
             letterSpacing: 0.5,
           ),
         ),
@@ -117,16 +124,27 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildFormCard() {
+  Widget _buildFormCard(ThemeData theme, bool isDark) {
+    final cardBg = isDark ? AppColors.bgCard : Colors.white;
+    final borderColor = isDark
+        ? AppColors.glassBorder
+        : Colors.black.withValues(alpha: 0.08);
+    final shadowColor = isDark
+        ? Colors.black.withValues(alpha: 0.3)
+        : Colors.black.withValues(alpha: 0.08);
+    final titleColor = isDark ? AppColors.textPrimary : const Color(0xFF0F172A);
+    final subtitleColor = isDark ? AppColors.textSecondary : const Color(0xFF475569);
+    final textColor = isDark ? AppColors.textPrimary : const Color(0xFF0F172A);
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: cardBg,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.glassBorder),
+        border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
+            color: shadowColor,
             blurRadius: 24,
             offset: const Offset(0, 8),
           ),
@@ -137,24 +155,24 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Giriş Yap',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: titleColor,
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'Hesabınıza giriş yapın',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+              style: TextStyle(color: subtitleColor, fontSize: 14),
             ),
             const SizedBox(height: 24),
             TextFormField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
-              style: const TextStyle(color: AppColors.textPrimary),
+              style: TextStyle(color: textColor),
               decoration: const InputDecoration(
                 labelText: 'E-posta',
                 prefixIcon: Icon(Icons.email_outlined),
@@ -169,7 +187,7 @@ class _LoginScreenState extends State<LoginScreen> {
             TextFormField(
               controller: _passwordController,
               obscureText: _obscurePassword,
-              style: const TextStyle(color: AppColors.textPrimary),
+              style: TextStyle(color: textColor),
               decoration: InputDecoration(
                 labelText: 'Şifre',
                 prefixIcon: const Icon(Icons.lock_outline_rounded),
@@ -178,7 +196,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     _obscurePassword
                         ? Icons.visibility_outlined
                         : Icons.visibility_off_outlined,
-                    color: AppColors.textSecondary,
+                    color: subtitleColor,
                   ),
                   onPressed: () =>
                       setState(() => _obscurePassword = !_obscurePassword),
@@ -224,13 +242,15 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildRegisterLink() {
+  Widget _buildRegisterLink(ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
+    final textColor = isDark ? AppColors.textSecondary : const Color(0xFF475569);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(
+        Text(
           'Hesabınız yok mu?',
-          style: TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: textColor),
         ),
         TextButton(
           onPressed: () => context.push(AppRoutes.register),

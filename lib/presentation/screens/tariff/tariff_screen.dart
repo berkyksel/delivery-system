@@ -175,29 +175,28 @@ class _TariffScreenState extends ConsumerState<TariffScreen>
     final l10n = ref.watch(appL10nProvider);
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: CustomScrollView(
-        slivers: [
-          // ── App Bar ─────────────────────────────────────────────────────────
-          SliverAppBar(
-            expandedHeight: 130,
-            pinned: true,
-            backgroundColor: theme.scaffoldBackgroundColor,
-            automaticallyImplyLeading: false,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF0D47A1), Color(0xFF0A0E1A)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
+      body: Column(
+        children: [
+          // ── Gradient Header ─────────────────────────────────────────────────
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isDark
+                    ? const [Color(0xFF0D47A1), Color(0xFF0A0E1A)]
+                    : const [Color(0xFF1565C0), Color(0xFF42A5F5)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         Text(
                           l10n.tariffTitle,
@@ -217,23 +216,24 @@ class _TariffScreenState extends ConsumerState<TariffScreen>
                       ],
                     ),
                   ),
-                ),
+                  // ── Tab Bar ───────────────────────────────────────────────
+                  TabBar(
+                    controller: _tabController,
+                    indicatorColor: AppColors.accent,
+                    labelColor: Colors.white,
+                    unselectedLabelColor: Colors.white54,
+                    tabs: [
+                      Tab(icon: const Icon(Icons.anchor_rounded, size: 18), text: l10n.tariffTabHaven),
+                      Tab(icon: const Icon(Icons.route_rounded, size: 18), text: l10n.tariffTabKmZone),
+                      Tab(icon: const Icon(Icons.tune_rounded, size: 18), text: l10n.tariffTabGeneral),
+                    ],
+                  ),
+                ],
               ),
             ),
-            bottom: TabBar(
-              controller: _tabController,
-              indicatorColor: AppColors.accent,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white54,
-              tabs: [
-                Tab(icon: const Icon(Icons.anchor_rounded, size: 18), text: l10n.tariffTabHaven),
-                Tab(icon: const Icon(Icons.route_rounded, size: 18), text: l10n.tariffTabKmZone),
-                Tab(icon: const Icon(Icons.tune_rounded, size: 18), text: l10n.tariffTabGeneral),
-              ],
-            ),
           ),
-
-          SliverFillRemaining(
+          // ── Tab Content ────────────────────────────────────────────────────
+          Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [

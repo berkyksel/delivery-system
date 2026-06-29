@@ -223,11 +223,12 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: AppColors.bgDark,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Yeni Teslimat / Teklif'),
-        backgroundColor: AppColors.bgDark,
+        backgroundColor: theme.scaffoldBackgroundColor,
         leading: IconButton(
           icon: const Icon(Icons.close_rounded),
           onPressed: () => context.pop(),
@@ -532,8 +533,13 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
     );
   }
 
-  // ── Kıyı Seçici ────────────────────────────────────────────────────────────
+  // ── Kıyı Seçici ────────────────────────────────────────────────────────
   Widget _buildSideSelector() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.12);
     return Row(
       children: PortSide.values
           .map((side) => Expanded(
@@ -561,7 +567,7 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
                             ? (side == PortSide.rechteroever
                                 ? AppColors.rechteroever
                                 : AppColors.linkeroever)
-                            : AppColors.glassBorder,
+                            : borderColor,
                         width: _driverSide == side ? 2 : 1,
                       ),
                     ),
@@ -577,7 +583,7 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
                               ? (side == PortSide.rechteroever
                                   ? AppColors.rechteroever
                                   : AppColors.linkeroever)
-                              : AppColors.textMuted,
+                              : theme.colorScheme.onSurfaceVariant,
                         ),
                         const SizedBox(width: 6),
                         Column(
@@ -589,17 +595,15 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 color: _driverSide == side
-                                    ? AppColors.textPrimary
-                                    : AppColors.textSecondary,
+                                    ? theme.colorScheme.onSurface
+                                    : theme.colorScheme.onSurfaceVariant,
                               ),
                             ),
                             Text(
                               side.turkishName,
                               style: TextStyle(
                                 fontSize: 10,
-                                color: _driverSide == side
-                                    ? AppColors.textSecondary
-                                    : AppColors.textMuted,
+                                color: theme.colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -613,8 +617,13 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
     );
   }
 
-  // ── Tarife Modu Seçici ─────────────────────────────────────────────────────
+  // ── Tarife Modu Seçici ──────────────────────────────────────────────────
   Widget _buildTariffModeSelector() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.12);
     final modes = [
       (TariffMode.havenBased, 'Haven Bazlı', Icons.anchor_rounded),
       (TariffMode.kmZone, 'Km Aralık', Icons.route_rounded),
@@ -644,7 +653,7 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
                         border: Border.all(
                           color: _tariffMode == m.$1
                               ? AppColors.primary
-                              : AppColors.glassBorder,
+                              : borderColor,
                           width: _tariffMode == m.$1 ? 1.5 : 1,
                         ),
                       ),
@@ -655,7 +664,7 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
                             size: 18,
                             color: _tariffMode == m.$1
                                 ? AppColors.primary
-                                : AppColors.textMuted,
+                                : theme.colorScheme.onSurfaceVariant,
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -664,8 +673,8 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
                               color: _tariffMode == m.$1
-                                  ? AppColors.textPrimary
-                                  : AppColors.textMuted,
+                                  ? theme.colorScheme.onSurface
+                                  : theme.colorScheme.onSurfaceVariant,
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -679,26 +688,26 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
     );
   }
 
-  // ── TIR Seçici ─────────────────────────────────────────────────────────────
+  // ── TIR Seçici ────────────────────────────────────────────────────────────
   Widget _buildTruckSelector() {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DropdownButtonFormField<TruckModel>(
           value: _selectedTruck,
-          dropdownColor: AppColors.bgCard,
-          style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+          dropdownColor: theme.colorScheme.surface,
+          style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 14),
           decoration: const InputDecoration(
             labelText: 'TIR Modeli Seçin',
-            prefixIcon:
-                Icon(Icons.local_shipping_rounded),
+            prefixIcon: Icon(Icons.local_shipping_rounded),
             helperText: 'Seçilirse tahmini yakıt tüketimi hesaplanır',
           ),
           items: [
-            const DropdownMenuItem(
+            DropdownMenuItem(
               value: null,
               child: Text('— Seçilmedi —',
-                  style: TextStyle(color: AppColors.textMuted)),
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
             ),
             ...TruckCatalog.models.map(
               (truck) => DropdownMenuItem(
@@ -709,14 +718,14 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
                   children: [
                     Text(
                       truck.fullName,
-                      style: const TextStyle(
-                          color: AppColors.textPrimary,
+                      style: TextStyle(
+                          color: theme.colorScheme.onSurface,
                           fontWeight: FontWeight.w600),
                     ),
                     Text(
                       '${truck.fuelConsumptionPer100km} L/100km · ${truck.axleConfig}',
-                      style: const TextStyle(
-                          color: AppColors.textMuted, fontSize: 11),
+                      style: TextStyle(
+                          color: theme.colorScheme.onSurfaceVariant, fontSize: 11),
                     ),
                   ],
                 ),
@@ -737,6 +746,11 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
   }
 
   Widget _buildTruckInfoCard(TruckModel truck) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.08);
     final distanceKm =
         double.tryParse(_distanceKmCtrl.text.replaceAll(',', '.')) ?? 0;
     final estimatedFuel =
@@ -745,9 +759,9 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A2236),
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.glassBorder),
+        border: Border.all(color: borderColor),
       ),
       child: Row(
         children: [
@@ -767,8 +781,8 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
               children: [
                 Text(
                   truck.displayName,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurface,
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                   ),
@@ -776,8 +790,8 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
                 const SizedBox(height: 2),
                 Text(
                   'Tank: ${truck.tankCapacityLiters.toStringAsFixed(0)} L  |  Tüketim: ${truck.fuelConsumptionPer100km} L/100km',
-                  style: const TextStyle(
-                      color: AppColors.textSecondary, fontSize: 11),
+                  style: TextStyle(
+                      color: theme.colorScheme.onSurfaceVariant, fontSize: 11),
                 ),
                 if (estimatedFuel != null) ...[
                   const SizedBox(height: 2),
@@ -939,7 +953,7 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: isSelected ? AppColors.primary : AppColors.glassBorder,
+                color: isSelected ? AppColors.primary : (Theme.of(context).brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.12)),
                 width: isSelected ? 1.5 : 1,
               ),
             ),
@@ -952,8 +966,8 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
                   lang.label,
                   style: TextStyle(
                     color: isSelected
-                        ? AppColors.textPrimary
-                        : AppColors.textSecondary,
+                        ? Theme.of(context).colorScheme.onSurface
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 12,
                     fontWeight:
                         isSelected ? FontWeight.w600 : FontWeight.w400,
@@ -977,11 +991,11 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
   }) {
     return TextFormField(
       controller: controller,
-      style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+      style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 11),
+        hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11),
         prefixIcon: Icon(icon, color: color, size: 18),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -999,12 +1013,17 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
 
   // ── Section Builder ────────────────────────────────────────────────────────
   Widget _buildSection(String title, IconData icon, List<Widget> children) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.08);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.glassBorder),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1015,10 +1034,10 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
               const SizedBox(width: 8),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textSecondary,
+                  color: theme.colorScheme.onSurfaceVariant,
                   letterSpacing: 1.0,
                 ),
               ),

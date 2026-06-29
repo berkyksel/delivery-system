@@ -159,6 +159,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
   }
 
   Widget _buildHeader(ThemeData theme, dynamic l10n) {
+    final isDark = theme.brightness == Brightness.dark;
+    final gradientColors = isDark
+        ? const [Color(0xFF0D47A1), Color(0xFF0A0E1A)]
+        : const [Color(0xFF1565C0), Color(0xFF42A5F5)];
     return SliverAppBar(
       expandedHeight: 110,
       pinned: true,
@@ -166,9 +170,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
       backgroundColor: theme.scaffoldBackgroundColor,
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF0D47A1), Color(0xFF0A0E1A)],
+              colors: gradientColors,
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
