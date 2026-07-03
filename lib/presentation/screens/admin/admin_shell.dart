@@ -1,65 +1,51 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/router/app_router.dart';
-import '../../core/theme/locale_provider.dart';
+import '../../../core/router/app_router.dart';
 
-class MainShell extends ConsumerWidget {
+class AdminShell extends ConsumerWidget {
   final Widget child;
-  const MainShell({super.key, required this.child});
+  const AdminShell({super.key, required this.child});
 
   int _getSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
-    if (location == AppRoutes.home) return 0;
-    if (location == AppRoutes.history) return 1;
-    if (location == AppRoutes.tariff) return 2;
-    if (location == AppRoutes.profile) return 3;
+    if (location == AppRoutes.admin) return 0;
+    if (location == AppRoutes.adminDeliveries) return 1;
+    if (location == AppRoutes.adminDrivers) return 2;
+    if (location == AppRoutes.adminSettings) return 3;
     return 0;
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedIndex = _getSelectedIndex(context);
-    final l10n = ref.watch(appL10nProvider);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       body: child,
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: FloatingActionButton.extended(
-          onPressed: () => context.push(AppRoutes.newDelivery),
-          backgroundColor: Theme.of(context).colorScheme.secondary,
-          foregroundColor: Colors.white,
-          elevation: 6,
-          icon: const Icon(Icons.add_rounded),
-          label: Text(
-            l10n.navNewDelivery,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      bottomNavigationBar: _BottomNavBar(
+      bottomNavigationBar: _AdminBottomNavBar(
         selectedIndex: selectedIndex,
-        l10n: l10n,
+        isDark: isDark,
+        theme: theme,
       ),
     );
   }
 }
 
-class _BottomNavBar extends StatelessWidget {
+class _AdminBottomNavBar extends StatelessWidget {
   final int selectedIndex;
-  final dynamic l10n;
+  final bool isDark;
+  final ThemeData theme;
 
-  const _BottomNavBar({
+  const _AdminBottomNavBar({
     required this.selectedIndex,
-    required this.l10n,
+    required this.isDark,
+    required this.theme,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final navBg = theme.colorScheme.surface;
     final borderColor = isDark
         ? Colors.white.withValues(alpha: 0.1)
@@ -68,9 +54,7 @@ class _BottomNavBar extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: navBg,
-        border: Border(
-          top: BorderSide(color: borderColor, width: 1),
-        ),
+        border: Border(top: BorderSide(color: borderColor, width: 1)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
@@ -85,30 +69,29 @@ class _BottomNavBar extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _NavItem(
-                icon: Icons.home_rounded,
-                label: l10n.navHome,
+              _AdminNavItem(
+                icon: Icons.dashboard_rounded,
+                label: 'Panel',
                 isSelected: selectedIndex == 0,
-                onTap: () => context.go(AppRoutes.home),
+                onTap: () => context.go(AppRoutes.admin),
               ),
-              _NavItem(
-                icon: Icons.history_rounded,
-                label: l10n.navHistory,
+              _AdminNavItem(
+                icon: Icons.local_shipping_rounded,
+                label: 'Teslimatlar',
                 isSelected: selectedIndex == 1,
-                onTap: () => context.go(AppRoutes.history),
+                onTap: () => context.go(AppRoutes.adminDeliveries),
               ),
-              const SizedBox(width: 8), // Orta boşluk
-              _NavItem(
-                icon: Icons.receipt_long_rounded,
-                label: l10n.navTariff,
+              _AdminNavItem(
+                icon: Icons.people_rounded,
+                label: 'Şoförler',
                 isSelected: selectedIndex == 2,
-                onTap: () => context.go(AppRoutes.tariff),
+                onTap: () => context.go(AppRoutes.adminDrivers),
               ),
-              _NavItem(
-                icon: Icons.person_rounded,
-                label: l10n.navProfile,
+              _AdminNavItem(
+                icon: Icons.settings_rounded,
+                label: 'Ayarlar',
                 isSelected: selectedIndex == 3,
-                onTap: () => context.go(AppRoutes.profile),
+                onTap: () => context.go(AppRoutes.adminSettings),
               ),
             ],
           ),
@@ -118,13 +101,13 @@ class _BottomNavBar extends StatelessWidget {
   }
 }
 
-class _NavItem extends StatelessWidget {
+class _AdminNavItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
 
-  const _NavItem({
+  const _AdminNavItem({
     required this.icon,
     required this.label,
     required this.isSelected,
@@ -134,7 +117,9 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final selectedColor = theme.colorScheme.secondary;
+    // Admin paneli için farklı renk (amber/turuncu yerine yeşil/teal)
+    const adminAccent = Color(0xFF10B981); // Emerald green
+    const selectedColor = adminAccent;
     final unselectedColor = theme.brightness == Brightness.dark
         ? const Color(0xFF475569)
         : const Color(0xFF94A3B8);
@@ -147,7 +132,7 @@ class _NavItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: isSelected
             ? BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                color: adminAccent.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               )
             : null,

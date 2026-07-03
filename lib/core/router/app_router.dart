@@ -11,6 +11,11 @@ import '../../presentation/screens/history/history_screen.dart';
 import '../../presentation/screens/tariff/tariff_screen.dart';
 import '../../presentation/screens/profile/profile_screen.dart';
 import '../../presentation/screens/main_shell.dart';
+import '../../presentation/screens/admin/admin_shell.dart';
+import '../../presentation/screens/admin/admin_dashboard_screen.dart';
+import '../../presentation/screens/admin/admin_deliveries_screen.dart';
+import '../../presentation/screens/admin/admin_drivers_screen.dart';
+import '../../presentation/screens/admin/admin_settings_screen.dart';
 import '../../data/models/delivery_model.dart';
 
 class AppRoutes {
@@ -24,6 +29,12 @@ class AppRoutes {
   static const String history = '/history';
   static const String tariff = '/tariff';
   static const String profile = '/profile';
+
+  // ─── Admin Rotaları ────────────────────────────────────────────────────────
+  static const String admin = '/admin';
+  static const String adminDeliveries = '/admin/deliveries';
+  static const String adminDrivers = '/admin/drivers';
+  static const String adminSettings = '/admin/settings';
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -85,6 +96,27 @@ final routerProvider = Provider<GoRouter>((ref) {
           }
           return QuotePreviewScreen(delivery: extra as DeliveryModel);
         },
+      ),
+      ShellRoute(
+        builder: (context, state, child) => AdminShell(child: child),
+        routes: [
+          GoRoute(
+            path: AppRoutes.admin,
+            builder: (context, state) => const AdminDashboardScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.adminDeliveries,
+            builder: (context, state) => const AdminDeliveriesScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.adminDrivers,
+            builder: (context, state) => const AdminDriversScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.adminSettings,
+            builder: (context, state) => const AdminSettingsScreen(),
+          ),
+        ],
       ),
     ],
   );

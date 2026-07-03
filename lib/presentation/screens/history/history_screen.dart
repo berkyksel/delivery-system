@@ -114,18 +114,18 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
           _buildHeader(theme, l10n),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Column(
                 children: [
                   _buildSummaryRow(theme, isDark, l10n)
                       .animate()
                       .fadeIn(duration: 400.ms)
                       .slideY(begin: 0.1),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
                   _buildFilterChips(theme, isDark, l10n)
                       .animate()
                       .fadeIn(delay: 100.ms, duration: 400.ms),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
                 ],
               ),
             ),
@@ -152,7 +152,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
               ),
             ),
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 80)),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
     );
@@ -164,7 +164,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
         ? const [Color(0xFF0D47A1), Color(0xFF0A0E1A)]
         : const [Color(0xFF1565C0), Color(0xFF42A5F5)];
     return SliverAppBar(
-      expandedHeight: 110,
+      expandedHeight: 120,
       pinned: true,
       automaticallyImplyLeading: false,
       backgroundColor: theme.scaffoldBackgroundColor,
