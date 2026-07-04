@@ -1,23 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/router/app_router.dart';
+import '../../../presentation/providers/auth_provider.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
-  bool _isAdmin = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -28,11 +30,28 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1)); // Firebase Auth eklenince
-    if (mounted) {
-      setState(() => _isLoading = false);
-      context.go(_isAdmin ? AppRoutes.admin : AppRoutes.home);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      await ref.read(authNotifierProvider.notifier).signIn(
+            email: _emailController.text,
+            password: _passwordController.text,
+          );
+      // Router redirect otomatik olarak rol kontrolü yapacak
+    } catch (e) {
+      if (mounted) {
+        setState(() => _errorMessage = e.toString());
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -59,15 +78,10 @@ class _LoginScreenState extends State<LoginScreen> {
               .fadeIn(delay: 200.ms, duration: 600.ms)
               .slideY(begin: 0.2, end: 0),
           const SizedBox(height: 24),
-          // Admin / Şoför Toggle
-          _buildRoleToggle(theme, isDark)
-              .animate()
-              .fadeIn(delay: 300.ms, duration: 600.ms),
-          const SizedBox(height: 12),
           // Register Link
           _buildRegisterLink(theme)
               .animate()
-              .fadeIn(delay: 400.ms, duration: 600.ms),
+              .fadeIn(delay: 300.ms, duration: 600.ms),
         ],
       ),
     );
@@ -248,121 +262,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildRoleToggle(ThemeData theme, bool isDark) {
-    final borderColor = isDark
-        ? Colors.white.withValues(alpha: 0.12)
-        : Colors.black.withValues(alpha: 0.08);
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.black.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _isAdmin = false),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: !_isAdmin
-                      ? AppColors.primary.withValues(alpha: 0.15)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                  border: !_isAdmin
-                      ? Border.all(color: AppColors.primary.withValues(alpha: 0.5))
-                      : null,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.local_shipping_rounded,
-                      size: 16,
-                      color: !_isAdmin
-                          ? AppColors.primary
-                          : (isDark
-                              ? AppColors.textSecondary
-                              : const Color(0xFF94A3B8)),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Şoför',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: !_isAdmin
-                            ? FontWeight.w700
-                            : FontWeight.w400,
-                        color: !_isAdmin
-                            ? AppColors.primary
-                            : (isDark
-                                ? AppColors.textSecondary
-                                : const Color(0xFF94A3B8)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _isAdmin = true),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: _isAdmin
-                      ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                  border: _isAdmin
-                      ? Border.all(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.5))
-                      : null,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.shield_rounded,
-                      size: 16,
-                      color: _isAdmin
-                          ? const Color(0xFF10B981)
-                          : (isDark
-                              ? AppColors.textSecondary
-                              : const Color(0xFF94A3B8)),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Yönetici',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: _isAdmin
-                            ? FontWeight.w700
-                            : FontWeight.w400,
-                        color: _isAdmin
-                            ? const Color(0xFF10B981)
-                            : (isDark
-                                ? AppColors.textSecondary
-                                : const Color(0xFF94A3B8)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildRegisterLink(ThemeData theme) {
     final isDark = theme.brightness == Brightness.dark;
@@ -375,7 +274,7 @@ class _LoginScreenState extends State<LoginScreen> {
           style: TextStyle(color: textColor),
         ),
         TextButton(
-          onPressed: () => context.push(AppRoutes.register),
+          onPressed: () => context.go(AppRoutes.register),
           child: const Text(
             'Kayıt Ol',
             style: TextStyle(

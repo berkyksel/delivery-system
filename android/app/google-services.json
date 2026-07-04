@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "962422289966",
+    "project_id": "anvers-limani",
+    "storage_bucket": "anvers-limani.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:962422289966:android:c5356ecbe33cbdb32891bf",
+        "android_client_info": {
+          "package_name": "com.example.anvers_liman"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBWDbJKsO36YMIXHqOqGcdSnTevqnYOUwE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

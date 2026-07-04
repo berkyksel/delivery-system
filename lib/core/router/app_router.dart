@@ -17,6 +17,8 @@ import '../../presentation/screens/admin/admin_deliveries_screen.dart';
 import '../../presentation/screens/admin/admin_drivers_screen.dart';
 import '../../presentation/screens/admin/admin_settings_screen.dart';
 import '../../data/models/delivery_model.dart';
+import '../../data/models/user_profile_model.dart';
+import '../../presentation/providers/auth_provider.dart';
 
 class AppRoutes {
   static const String login = '/login';
@@ -38,8 +40,42 @@ class AppRoutes {
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
+  // Auth state değişikliklerini dinle → router otomatik yenilenir
+  final authState = ref.watch(authStateProvider);
+  final profileAsync = ref.watch(currentUserProfileProvider);
+
   return GoRouter(
     initialLocation: AppRoutes.login,
+    // ── Auth Guard ──────────────────────────────────────────────────────────
+    redirect: (context, state) {
+      final location = state.matchedLocation;
+      final isPublic =
+          location == AppRoutes.login || location == AppRoutes.register;
+
+      // Auth yükleniyorsa bekle (ilk başlatmada null gelir)
+      if (authState.isLoading) return null;
+
+      final user = authState.value;
+      final isLoggedIn = user != null;
+
+      // Giriş yapılmamışsa → login (public sayfalar hariç)
+      if (!isLoggedIn && !isPublic) return AppRoutes.login;
+
+      // Giriş yapılmışsa login/register'da durmamalı
+      if (isLoggedIn && isPublic) {
+        final role = profileAsync.value?.role;
+        if (role == UserRole.manager) return AppRoutes.admin;
+        return AppRoutes.home;
+      }
+
+      // Admin olmayan kullanıcı admin rotalarına giremez
+      if (isLoggedIn && location.startsWith('/admin')) {
+        final role = profileAsync.value?.role;
+        if (role != UserRole.manager) return AppRoutes.home;
+      }
+
+      return null;
+    },
     routes: [
       GoRoute(
         path: AppRoutes.login,
@@ -49,6 +85,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.register,
         builder: (context, state) => const RegisterScreen(),
       ),
+      // ── Şoför Shell ──────────────────────────────────────────────────────
       ShellRoute(
         builder: (context, state, child) => MainShell(child: child),
         routes: [
@@ -97,6 +134,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           return QuotePreviewScreen(delivery: extra as DeliveryModel);
         },
       ),
+      // ── Admin Shell ───────────────────────────────────────────────────────
       ShellRoute(
         builder: (context, state, child) => AdminShell(child: child),
         routes: [

@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/models/user_profile_model.dart';
+import '../../../presentation/providers/auth_provider.dart';
 
-class RegisterScreen extends StatefulWidget {
+class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
@@ -36,10 +38,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
-    if (mounted) {
-      setState(() => _isLoading = false);
-      context.go(AppRoutes.home);
+    try {
+      await ref.read(authNotifierProvider.notifier).register(
+            email: _emailCtrl.text,
+            password: _passwordCtrl.text,
+            firstName: _firstNameCtrl.text,
+            lastName: _lastNameCtrl.text,
+            vehiclePlate: _plateCtrl.text.isEmpty ? null : _plateCtrl.text,
+            role: _selectedRole,
+          );
+      // Router redirect otomatik olarak role göre yönlendirir
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -114,7 +133,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         children: [
           IconButton(
             icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
-            onPressed: () => context.pop(),
+            onPressed: () => context.go(AppRoutes.login),
           ),
           const Expanded(
             child: Text(
