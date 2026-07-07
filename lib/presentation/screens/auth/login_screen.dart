@@ -82,6 +82,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _buildRegisterLink(theme)
               .animate()
               .fadeIn(delay: 300.ms, duration: 600.ms),
+          const SizedBox(height: 8),
+          // Admin Access
+          _buildAdminAccess(isDark)
+              .animate()
+              .fadeIn(delay: 400.ms, duration: 600.ms),
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -256,12 +262,66 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     : const Text('Giriş Yap'),
               ),
             ),
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.red, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
+
+  Widget _buildAdminAccess(bool isDark) {
+    final textColor = isDark ? AppColors.textMuted : const Color(0xFF94A3B8);
+    return GestureDetector(
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (ctx) => _AdminLoginDialog(),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.admin_panel_settings_outlined, size: 14, color: textColor),
+            const SizedBox(width: 4),
+            Text(
+              'Yönetici Girişi',
+              style: TextStyle(
+                fontSize: 12,
+                color: textColor,
+                decoration: TextDecoration.underline,
+                decorationColor: textColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildRegisterLink(ThemeData theme) {
     final isDark = theme.brightness == Brightness.dark;
@@ -287,3 +347,145 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 }
+
+// ── Yönetici Giriş Dialog'u ───────────────────────────────────────────────────
+class _AdminLoginDialog extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_AdminLoginDialog> createState() => _AdminLoginDialogState();
+}
+
+class _AdminLoginDialogState extends ConsumerState<_AdminLoginDialog> {
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  bool _obscure = true;
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _adminLogin() async {
+    if (_emailCtrl.text.isEmpty || _passwordCtrl.text.isEmpty) {
+      setState(() => _error = 'E-posta ve şifre zorunludur');
+      return;
+    }
+    setState(() { _loading = true; _error = null; });
+    try {
+      await ref.read(authNotifierProvider.notifier).signIn(
+        email: _emailCtrl.text,
+        password: _passwordCtrl.text,
+      );
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? AppColors.bgCard : Colors.white;
+    final textColor = isDark ? AppColors.textPrimary : const Color(0xFF0F172A);
+    final subtitleColor = isDark ? AppColors.textSecondary : const Color(0xFF475569);
+
+    return Dialog(
+      backgroundColor: cardBg,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.admin_panel_settings_rounded,
+                      color: AppColors.primary, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Yönetici Girişi',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: textColor)),
+                      Text('Sadece yöneticiler için',
+                          style: TextStyle(fontSize: 12, color: subtitleColor)),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close, color: subtitleColor, size: 20),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              style: TextStyle(color: textColor),
+              decoration: const InputDecoration(
+                labelText: 'Yönetici E-posta',
+                prefixIcon: Icon(Icons.email_outlined),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _passwordCtrl,
+              obscureText: _obscure,
+              style: TextStyle(color: textColor),
+              decoration: InputDecoration(
+                labelText: 'Şifre',
+                prefixIcon: const Icon(Icons.lock_outline_rounded),
+                suffixIcon: IconButton(
+                  icon: Icon(_obscure
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                      color: subtitleColor),
+                  onPressed: () => setState(() => _obscure = !_obscure),
+                ),
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              Text(_error!,
+                  style: const TextStyle(color: AppColors.error, fontSize: 12)),
+            ],
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: _loading ? null : _adminLogin,
+                child: _loading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : const Text('Yönetici Olarak Giriş Yap'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

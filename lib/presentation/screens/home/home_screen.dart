@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,8 +10,16 @@ import '../../../core/theme/locale_provider.dart';
 import '../../../data/models/delivery_model.dart';
 import '../../../data/services/tariff_service.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  // Seçili kıyı — haritadan seçilebilir
+  PortSide _currentSide = PortSide.rechteroever;
 
   // Mock data - Firebase entegrasyonu eklenince kaldırılacak
   static final List<DeliveryModel> _mockDeliveries = [
@@ -61,8 +70,21 @@ class HomeScreen extends ConsumerWidget {
     ),
   ];
 
+  // ── Konum Seçici BottomSheet ─────────────────────────────────────────────────
+  Future<void> _showLocationPicker() async {
+    final selected = await showModalBottomSheet<PortSide>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _LocationPickerSheet(currentSide: _currentSide),
+    );
+    if (selected != null && mounted) {
+      setState(() => _currentSide = selected);
+    }
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final totalEarnings = _mockDeliveries
         .where((d) => d.status == DeliveryStatus.completed)
         .fold(0.0, (sum, d) => sum + d.totalFee);
@@ -247,68 +269,84 @@ class HomeScreen extends ConsumerWidget {
         ? Colors.white.withValues(alpha: 0.1)
         : Colors.black.withValues(alpha: 0.08);
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.rechteroever.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.location_on_rounded,
-              color: AppColors.rechteroever,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.homeCurrentLocation,
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: theme.colorScheme.onSurfaceVariant),
-                ),
-                Text(
-                  'Rechteroever (Sağ Kıyı)',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.rechteroever.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                  color: AppColors.rechteroever.withValues(alpha: 0.3)),
-            ),
-            child: Text(
-              l10n.homeChange,
-              style: const TextStyle(
-                color: AppColors.rechteroever,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+    final isRight = _currentSide == PortSide.rechteroever;
+    final sideColor =
+        isRight ? AppColors.rechteroever : AppColors.linkeroever;
+    final sideText = isRight
+        ? 'Rechteroever (Sağ Kıyı)'
+        : 'Linkeroever (Sol Kıyı)';
+
+    return GestureDetector(
+      onTap: _showLocationPicker,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: sideColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.location_on_rounded,
+                color: sideColor,
+                size: 22,
               ),
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.homeCurrentLocation,
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                  Text(
+                    sideText,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: sideColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                    color: sideColor.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.map_rounded, size: 12, color: sideColor),
+                  const SizedBox(width: 4),
+                  Text(
+                    l10n.homeChange,
+                    style: TextStyle(
+                      color: sideColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     ).animate().fadeIn(delay: 240.ms, duration: 400.ms);
   }
@@ -439,6 +477,423 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// Konum Seçici BottomSheet
+// ══════════════════════════════════════════════════════════════════════════════
+class _LocationPickerSheet extends StatefulWidget {
+  final PortSide currentSide;
+  const _LocationPickerSheet({required this.currentSide});
+
+  @override
+  State<_LocationPickerSheet> createState() => _LocationPickerSheetState();
+}
+
+class _LocationPickerSheetState extends State<_LocationPickerSheet> {
+  late PortSide _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.currentSide;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF111827) : Colors.white;
+    final surfaceBg = isDark ? const Color(0xFF1A2236) : const Color(0xFFF8FAFC);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Drag handle
+          Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color:
+                  theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Başlık
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.map_rounded,
+                    color: AppColors.primary, size: 18),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Mevcut Konumunuz',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  Text(
+                    'Antwerp Limanı kıyısını seçin',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // ── Liman haritası görseli ─────────────────────────────────────
+          Container(
+            width: double.infinity,
+            height: 160,
+            decoration: BoxDecoration(
+              color: surfaceBg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.black.withValues(alpha: 0.06),
+              ),
+            ),
+            child: Stack(
+              children: [
+                // Schelde nehri arka planı
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: CustomPaint(
+                    size: const Size(double.infinity, 160),
+                    painter: _AntwerpMapPainter(
+                      selectedSide: _selected,
+                      isDark: isDark,
+                    ),
+                  ),
+                ),
+                // Rechteroever tıklama alanı (sağ yarı)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: MediaQuery.of(context).size.width / 2 - 20,
+                  child: GestureDetector(
+                    onTap: () =>
+                        setState(() => _selected = PortSide.rechteroever),
+                    child: Container(color: Colors.transparent),
+                  ),
+                ),
+                // Linkeroever tıklama alanı (sol yarı)
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: MediaQuery.of(context).size.width / 2 - 20,
+                  child: GestureDetector(
+                    onTap: () =>
+                        setState(() => _selected = PortSide.linkeroever),
+                    child: Container(color: Colors.transparent),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // ── İki kıyı seçim kartları ───────────────────────────────────
+          Row(
+            children: PortSide.values.map((side) {
+              final isSelected = _selected == side;
+              final color = side == PortSide.rechteroever
+                  ? AppColors.rechteroever
+                  : AppColors.linkeroever;
+              final flag = side == PortSide.rechteroever ? '🏗️' : '🚢';
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _selected = side),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: EdgeInsets.only(
+                        right: side == PortSide.rechteroever ? 8 : 0),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? color.withValues(alpha: 0.12)
+                          : surfaceBg,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isSelected
+                            ? color
+                            : (isDark
+                                ? Colors.white.withValues(alpha: 0.1)
+                                : Colors.black.withValues(alpha: 0.08)),
+                        width: isSelected ? 2 : 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(flag,
+                                style: const TextStyle(fontSize: 18)),
+                            const Spacer(),
+                            if (isSelected)
+                              Icon(Icons.check_circle_rounded,
+                                  color: color, size: 18),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          side.dutchName,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: isSelected
+                                ? color
+                                : theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        Text(
+                          side.turkishName,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          side == PortSide.rechteroever
+                              ? 'Haven 206 – 1700'
+                              : 'Haven 101 – 869',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: theme.colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 20),
+
+          // Onayla butonu
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton.icon(
+              onPressed: () => Navigator.pop(context, _selected),
+              icon: const Icon(Icons.check_rounded, size: 18),
+              label: Text(
+                '${_selected.dutchName} Olarak Kaydet',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _selected == PortSide.rechteroever
+                    ? AppColors.rechteroever
+                    : AppColors.linkeroever,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Antwerp Liman Haritası CustomPainter ──────────────────────────────────────
+class _AntwerpMapPainter extends CustomPainter {
+  final PortSide selectedSide;
+  final bool isDark;
+
+  const _AntwerpMapPainter({
+    required this.selectedSide,
+    required this.isDark,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    // Arka plan
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, w, h),
+      Paint()
+        ..color = isDark ? const Color(0xFF0D1B2A) : const Color(0xFFE8F4FD),
+    );
+
+    // Schelde nehri — ortadan geçen mavi şerit
+    final riverPaint = Paint()
+      ..color = isDark ? const Color(0xFF1565C0) : const Color(0xFF42A5F5)
+      ..style = PaintingStyle.fill;
+
+    final riverPath = Path()
+      ..moveTo(w * 0.35, 0)
+      ..lineTo(w * 0.45, 0)
+      ..lineTo(w * 0.60, h)
+      ..lineTo(w * 0.50, h)
+      ..close();
+    canvas.drawPath(riverPath, riverPaint);
+
+    // Nehir üstü ince parlaklık
+    canvas.drawPath(
+      riverPath,
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.08)
+        ..style = PaintingStyle.fill,
+    );
+
+    // Rechteroever (sağ kıyı) alanı
+    final rightSelected = selectedSide == PortSide.rechteroever;
+    final rightPaint = Paint()
+      ..color = rightSelected
+          ? AppColors.rechteroever.withValues(alpha: 0.25)
+          : (isDark
+              ? Colors.white.withValues(alpha: 0.04)
+              : Colors.black.withValues(alpha: 0.04))
+      ..style = PaintingStyle.fill;
+    canvas.drawRect(
+      Rect.fromLTWH(w * 0.60, 0, w * 0.40, h),
+      rightPaint,
+    );
+
+    // Linkeroever (sol kıyı) alanı
+    final leftSelected = selectedSide == PortSide.linkeroever;
+    final leftPaint = Paint()
+      ..color = leftSelected
+          ? AppColors.linkeroever.withValues(alpha: 0.25)
+          : (isDark
+              ? Colors.white.withValues(alpha: 0.04)
+              : Colors.black.withValues(alpha: 0.04))
+      ..style = PaintingStyle.fill;
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, w * 0.35, h),
+      leftPaint,
+    );
+
+    // Seçili taraf için kenarlık vurgusu
+    if (rightSelected) {
+      canvas.drawRect(
+        Rect.fromLTWH(w * 0.60, 0, w * 0.40, h),
+        Paint()
+          ..color = AppColors.rechteroever.withValues(alpha: 0.5)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+    }
+    if (leftSelected) {
+      canvas.drawRect(
+        Rect.fromLTWH(0, 0, w * 0.35, h),
+        Paint()
+          ..color = AppColors.linkeroever.withValues(alpha: 0.5)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+    }
+
+    // Labellar
+    final textStyle = TextStyle(
+      color: isDark ? Colors.white70 : Colors.black54,
+      fontSize: 10,
+      fontWeight: FontWeight.w600,
+    );
+
+    // "LINKEROEVER" etiketi
+    _drawText(canvas, 'LINKEROEVER', Offset(w * 0.17, h * 0.18), textStyle,
+        leftSelected ? AppColors.linkeroever : null);
+
+    // "SCHELDE" etiketi
+    _drawText(canvas, 'SCHELDE', Offset(w * 0.42, h * 0.45),
+        textStyle.copyWith(color: Colors.white70, fontSize: 8), null,
+        rotated: true);
+
+    // "RECHTEROEVER" etiketi
+    _drawText(canvas, 'RECHTEROEVER', Offset(w * 0.68, h * 0.18), textStyle,
+        rightSelected ? AppColors.rechteroever : null);
+
+    // Harita konumu ikonları
+    _drawLocationPin(canvas, Offset(w * 0.17, h * 0.6),
+        leftSelected ? AppColors.linkeroever : Colors.grey.withValues(alpha: 0.5));
+    _drawLocationPin(canvas, Offset(w * 0.78, h * 0.6),
+        rightSelected ? AppColors.rechteroever : Colors.grey.withValues(alpha: 0.5));
+
+    // Kuzey ok işareti
+    _drawNorthArrow(canvas, Offset(w - 20, 20), isDark);
+  }
+
+  void _drawText(Canvas canvas, String text, Offset offset, TextStyle style,
+      Color? highlightColor,
+      {bool rotated = false}) {
+    final painter = TextPainter(
+      text: TextSpan(
+          text: text,
+          style: highlightColor != null
+              ? style.copyWith(
+                  color: highlightColor, fontWeight: FontWeight.w800)
+              : style),
+      textDirection: ui.TextDirection.ltr,
+    )..layout();
+    if (rotated) {
+      canvas.save();
+      canvas.translate(offset.dx, offset.dy);
+      canvas.rotate(-1.5708); // -90 derece
+      painter.paint(canvas, Offset(-painter.width / 2, -painter.height / 2));
+      canvas.restore();
+    } else {
+      painter.paint(
+          canvas, Offset(offset.dx - painter.width / 2, offset.dy));
+    }
+  }
+
+  void _drawLocationPin(Canvas canvas, Offset center, Color color) {
+    final paint = Paint()..color = color..style = PaintingStyle.fill;
+    canvas.drawCircle(center, 6, paint);
+    canvas.drawCircle(
+        center, 6, Paint()..color = color.withValues(alpha: 0.3)..style = PaintingStyle.stroke..strokeWidth = 3);
+  }
+
+  void _drawNorthArrow(Canvas canvas, Offset pos, bool isDark) {
+    final color =
+        isDark ? Colors.white.withValues(alpha: 0.5) : Colors.black38;
+    final paint = Paint()..color = color..strokeWidth = 1.5..style = PaintingStyle.stroke;
+    canvas.drawLine(pos, Offset(pos.dx, pos.dy - 12), paint);
+    canvas.drawLine(pos, Offset(pos.dx - 4, pos.dy - 8),
+        Paint()..color = color..strokeWidth = 1.5..style = PaintingStyle.stroke);
+    canvas.drawLine(pos, Offset(pos.dx + 4, pos.dy - 8),
+        Paint()..color = color..strokeWidth = 1.5..style = PaintingStyle.stroke);
+  }
+
+  @override
+  bool shouldRepaint(_AntwerpMapPainter old) =>
+      old.selectedSide != selectedSide || old.isDark != isDark;
+}
+
+// ── Stat Kartı ───────────────────────────────────────────────────────────────
 class _StatCard extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -505,6 +960,7 @@ class _StatCard extends StatelessWidget {
   }
 }
 
+// ── Durum Rozeti ─────────────────────────────────────────────────────────────
 class _StatusBadge extends StatelessWidget {
   final DeliveryStatus status;
   const _StatusBadge({required this.status});

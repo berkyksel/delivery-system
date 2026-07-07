@@ -176,4 +176,38 @@ class UserTariff {
       mode: mode ?? this.mode,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'havenRates': havenRates,
+        'kmZones': kmZones.map((z) => z.toMap()).toList(),
+        'perKmRate': perKmRate,
+        'minimumFee': minimumFee,
+        'tunnelFee': tunnelFee,
+        'gensetFee': gensetFee,
+        'adrFee': adrFee,
+        'defaultDieselSurchargePercent': defaultDieselSurchargePercent,
+        'mode': mode.name,
+      };
+
+  factory UserTariff.fromJson(Map<String, dynamic> json) => UserTariff(
+        havenRates: (json['havenRates'] as Map<String, dynamic>?)
+                ?.map((k, v) => MapEntry(k, (v as num).toDouble())) ??
+            {},
+        kmZones: (json['kmZones'] as List<dynamic>?)
+                ?.map((e) => TariffZone.fromMap(e as Map<String, dynamic>))
+                .toList() ??
+            [],
+        perKmRate: (json['perKmRate'] as num?)?.toDouble() ?? 0.0,
+        minimumFee: (json['minimumFee'] as num?)?.toDouble() ?? 0.0,
+        tunnelFee: (json['tunnelFee'] as num?)?.toDouble() ?? 17.60,
+        gensetFee: (json['gensetFee'] as num?)?.toDouble() ?? 0.0,
+        adrFee: (json['adrFee'] as num?)?.toDouble() ?? 0.0,
+        defaultDieselSurchargePercent:
+            (json['defaultDieselSurchargePercent'] as num?)?.toDouble() ?? 0.0,
+        mode: TariffMode.values.firstWhere(
+          (e) => e.name == json['mode'],
+          orElse: () => TariffMode.havenBased,
+        ),
+      );
 }
+

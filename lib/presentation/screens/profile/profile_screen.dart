@@ -1,12 +1,20 @@
+import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/theme/locale_provider.dart';
 import '../../../data/models/delivery_model.dart';
 import '../../../data/models/user_profile_model.dart';
 import '../../../data/services/tariff_service.dart';
+import '../../providers/auth_provider.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -28,6 +36,143 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     role: UserRole.driver,
     currentSide: 'rechteroever',
   );
+
+  File? _localPhotoFile;
+  bool _isUploadingPhoto = false;
+
+  // ── Fotoğraf Seç & Yükle ────────────────────────────────────────────────────
+  Future<void> _pickAndUploadPhoto() async {
+    // Kaynak seçtir
+    final source = await _showImageSourceDialog();
+    if (source == null) return;
+
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: source,
+      imageQuality: 75,
+      maxWidth: 800,
+    );
+    if (picked == null) return;
+
+    setState(() {
+      _localPhotoFile = File(picked.path);
+      _isUploadingPhoto = true;
+    });
+
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid ?? _profile.uid;
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('users/$uid/profile.jpg');
+
+      await ref.putFile(_localPhotoFile!);
+      final downloadUrl = await ref.getDownloadURL();
+
+      // Firestore güncelle
+      await FirebaseFirestore.instance
+          .collection(AppConstants.usersCollection)
+          .doc(uid)
+          .update({'photoUrl': downloadUrl});
+
+      setState(() {
+        _profile = _profile.copyWith(photoUrl: downloadUrl);
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profil fotoğrafı güncellendi ✓'),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Fotoğraf yüklenemedi: $e'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingPhoto = false);
+    }
+  }
+
+  Future<ImageSource?> _showImageSourceDialog() async {
+    return showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        final isDark = theme.brightness == Brightness.dark;
+        final cardBg = isDark ? const Color(0xFF1A2236) : Colors.white;
+        return Container(
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag handle
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Fotoğraf Seç',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SourceOption(
+                      icon: Icons.camera_alt_rounded,
+                      label: 'Kamera',
+                      color: AppColors.primary,
+                      onTap: () => Navigator.pop(ctx, ImageSource.camera),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _SourceOption(
+                      icon: Icons.photo_library_rounded,
+                      label: 'Galeri',
+                      color: AppColors.accent,
+                      onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(
+                  'İptal',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -98,57 +243,65 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const SizedBox(height: 8),
-                // Avatar
-                Stack(
-                  children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: AppColors.primaryGradient,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.3),
-                          width: 3,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.4),
-                            blurRadius: 20,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${_profile.firstName[0]}${_profile.lastName[0]}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        width: 26,
-                        height: 26,
+                // Avatar — tıklanabilir
+                GestureDetector(
+                  onTap: _isUploadingPhoto ? null : _pickAndUploadPhoto,
+                  child: Stack(
+                    children: [
+                      // Fotoğraf veya baş harfler
+                      Container(
+                        width: 80,
+                        height: 80,
                         decoration: BoxDecoration(
-                          color: AppColors.accent,
                           shape: BoxShape.circle,
+                          gradient: AppColors.primaryGradient,
                           border: Border.all(
-                            color: theme.scaffoldBackgroundColor,
-                            width: 2,
+                            color: Colors.white.withValues(alpha: 0.3),
+                            width: 3,
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.4),
+                              blurRadius: 20,
+                              spreadRadius: 2,
+                            ),
+                          ],
                         ),
-                        child: const Icon(Icons.camera_alt_rounded,
-                            size: 13, color: Colors.white),
+                        child: ClipOval(
+                          child: _buildAvatarContent(),
+                        ),
                       ),
-                    ),
-                  ],
+                      // Kamera ikonu
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          width: 26,
+                          height: 26,
+                          decoration: BoxDecoration(
+                            color: _isUploadingPhoto
+                                ? Colors.grey
+                                : AppColors.accent,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: theme.scaffoldBackgroundColor,
+                              width: 2,
+                            ),
+                          ),
+                          child: _isUploadingPhoto
+                              ? const Padding(
+                                  padding: EdgeInsets.all(5),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.camera_alt_rounded,
+                                  size: 13, color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -184,6 +337,40 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Yerel dosya varsa → dosyadan, url varsa → ağdan, yoksa → baş harfler
+  Widget _buildAvatarContent() {
+    if (_localPhotoFile != null) {
+      return Image.file(_localPhotoFile!, fit: BoxFit.cover,
+          width: 80, height: 80);
+    }
+    if (_profile.photoUrl != null && _profile.photoUrl!.isNotEmpty) {
+      return CachedNetworkImage(
+        imageUrl: _profile.photoUrl!,
+        fit: BoxFit.cover,
+        width: 80,
+        height: 80,
+        placeholder: (_, __) => const Center(
+          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+        ),
+        errorWidget: (_, __, ___) => _buildInitials(),
+      );
+    }
+    return _buildInitials();
+  }
+
+  Widget _buildInitials() {
+    return Center(
+      child: Text(
+        '${_profile.firstName[0]}${_profile.lastName[0]}',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 28,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );
@@ -669,11 +856,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           context: context,
           builder: (ctx) => AlertDialog(
             backgroundColor: theme.colorScheme.surface,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16)),
             title: Text(l10n.profileLogout,
                 style: TextStyle(color: theme.colorScheme.onSurface)),
             content: Text(
                 l10n.profileLogoutConfirm,
-                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                style:
+                    TextStyle(color: theme.colorScheme.onSurfaceVariant)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
@@ -682,9 +872,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         color: theme.colorScheme.onSurfaceVariant)),
               ),
               TextButton(
-                onPressed: () {
+                onPressed: () async {
                   Navigator.pop(ctx);
-                  // Firebase signOut()
+                  // Gerçek çıkış — GoRouter redirect otomatik /login'e yönlendirir
+                  await ref
+                      .read(authNotifierProvider.notifier)
+                      .signOut();
                 },
                 child: Text(l10n.profileLogout,
                     style: const TextStyle(color: AppColors.error)),
@@ -705,6 +898,52 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 }
 
+// ── Yardımcı Widget: Kaynak Seçenek Butonu ────────────────────────────────────
+class _SourceOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _SourceOption({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Bilgi Satırı ─────────────────────────────────────────────────────────────
 class _InfoTile extends StatelessWidget {
   final IconData icon;
   final String label;

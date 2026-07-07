@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/user_profile_model.dart';
-import '../../data/repositories/user_repository.dart';
 import '../../data/repositories/tariff_repository.dart';
 import 'auth_provider.dart';
 
