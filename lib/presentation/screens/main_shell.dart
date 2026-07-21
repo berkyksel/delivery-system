@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/router/app_router.dart';
@@ -24,21 +25,7 @@ class MainShell extends ConsumerWidget {
 
     return Scaffold(
       body: child,
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: FloatingActionButton.extended(
-          onPressed: () => context.push(AppRoutes.newDelivery),
-          backgroundColor: Theme.of(context).colorScheme.secondary,
-          foregroundColor: Colors.white,
-          elevation: 6,
-          icon: const Icon(Icons.add_rounded),
-          label: Text(
-            l10n.navNewDelivery,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      // FAB'ı kaldırdık — butonu nav bar'ın içine taşıdık
       bottomNavigationBar: _BottomNavBar(
         selectedIndex: selectedIndex,
         l10n: l10n,
@@ -47,6 +34,9 @@ class MainShell extends ConsumerWidget {
   }
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// Alt Navigasyon Çubuğu — Ortada Yükselen Yeni Teslimat Butonu
+// ══════════════════════════════════════════════════════════════════════════════
 class _BottomNavBar extends StatelessWidget {
   final int selectedIndex;
   final dynamic l10n;
@@ -80,35 +70,56 @@ class _BottomNavBar extends StatelessWidget {
         ],
       ),
       child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+        child: SizedBox(
+          height: 64,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
             children: [
-              _NavItem(
-                icon: Icons.home_rounded,
-                label: l10n.navHome,
-                isSelected: selectedIndex == 0,
-                onTap: () => context.go(AppRoutes.home),
+              // ── Sol ve Sağ Nav Item'ları ─────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    // Ana Sayfa
+                    _NavItem(
+                      icon: Icons.home_rounded,
+                      label: l10n.navHome,
+                      isSelected: selectedIndex == 0,
+                      onTap: () => context.go(AppRoutes.home),
+                    ),
+                    // Geçmiş
+                    _NavItem(
+                      icon: Icons.history_rounded,
+                      label: l10n.navHistory,
+                      isSelected: selectedIndex == 1,
+                      onTap: () => context.go(AppRoutes.history),
+                    ),
+                    // Orta boşluk — merkez buton için
+                    const SizedBox(width: 72),
+                    // Tarife
+                    _NavItem(
+                      icon: Icons.receipt_long_rounded,
+                      label: l10n.navTariff,
+                      isSelected: selectedIndex == 2,
+                      onTap: () => context.go(AppRoutes.tariff),
+                    ),
+                    // Profil
+                    _NavItem(
+                      icon: Icons.person_rounded,
+                      label: l10n.navProfile,
+                      isSelected: selectedIndex == 3,
+                      onTap: () => context.go(AppRoutes.profile),
+                    ),
+                  ],
+                ),
               ),
-              _NavItem(
-                icon: Icons.history_rounded,
-                label: l10n.navHistory,
-                isSelected: selectedIndex == 1,
-                onTap: () => context.go(AppRoutes.history),
-              ),
-              const SizedBox(width: 8), // Orta boşluk
-              _NavItem(
-                icon: Icons.receipt_long_rounded,
-                label: l10n.navTariff,
-                isSelected: selectedIndex == 2,
-                onTap: () => context.go(AppRoutes.tariff),
-              ),
-              _NavItem(
-                icon: Icons.person_rounded,
-                label: l10n.navProfile,
-                isSelected: selectedIndex == 3,
-                onTap: () => context.go(AppRoutes.profile),
+
+              // ── Merkez Yükselen Buton ─────────────────────────────────────
+              Positioned(
+                top: -22, // Nav bar üstüne taşar
+                child: _CenterActionButton(l10n: l10n),
               ),
             ],
           ),
@@ -118,6 +129,91 @@ class _BottomNavBar extends StatelessWidget {
   }
 }
 
+// ── Merkezi Yükselen Aksiyon Butonu ───────────────────────────────────────────
+class _CenterActionButton extends StatefulWidget {
+  final dynamic l10n;
+  const _CenterActionButton({required this.l10n});
+
+  @override
+  State<_CenterActionButton> createState() => _CenterActionButtonState();
+}
+
+class _CenterActionButtonState extends State<_CenterActionButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scaleAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 120),
+      lowerBound: 0.0,
+      upperBound: 1.0,
+    );
+    _scaleAnim = Tween<double>(begin: 1.0, end: 0.88).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(TapDownDetails _) => _ctrl.forward();
+  void _onTapUp(TapUpDetails _) => _ctrl.reverse();
+  void _onTapCancel() => _ctrl.reverse();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: _onTapDown,
+      onTapUp: _onTapUp,
+      onTapCancel: _onTapCancel,
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        context.push(AppRoutes.newDelivery);
+      },
+      child: AnimatedBuilder(
+        animation: _scaleAnim,
+        builder: (_, child) => Transform.scale(
+          scale: _scaleAnim.value,
+          child: child,
+        ),
+        child: Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFF8C00), Color(0xFFFF6B00)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFF6B00).withValues(alpha: 0.45),
+                blurRadius: 18,
+                spreadRadius: 2,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.add_rounded,
+            color: Colors.white,
+            size: 30,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Nav Item ─────────────────────────────────────────────────────────────────
 class _NavItem extends StatelessWidget {
   final IconData icon;
   final String label;

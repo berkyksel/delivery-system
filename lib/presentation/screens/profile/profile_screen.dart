@@ -40,6 +40,36 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   File? _localPhotoFile;
   bool _isUploadingPhoto = false;
 
+  // ── Düzenleme State'i ────────────────────────────────────────────────────────
+  bool _editingPersonal = false;
+  bool _editingVehicle = false;
+
+  late final TextEditingController _firstNameCtrl;
+  late final TextEditingController _lastNameCtrl;
+  late final TextEditingController _phoneCtrl;
+  late final TextEditingController _plateCtrl;
+  late final TextEditingController _vehicleTypeCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _firstNameCtrl = TextEditingController(text: _profile.firstName);
+    _lastNameCtrl  = TextEditingController(text: _profile.lastName);
+    _phoneCtrl     = TextEditingController(text: _profile.phone ?? '');
+    _plateCtrl     = TextEditingController(text: _profile.vehiclePlate ?? '');
+    _vehicleTypeCtrl = TextEditingController(text: _profile.vehicleType ?? '');
+  }
+
+  @override
+  void dispose() {
+    _firstNameCtrl.dispose();
+    _lastNameCtrl.dispose();
+    _phoneCtrl.dispose();
+    _plateCtrl.dispose();
+    _vehicleTypeCtrl.dispose();
+    super.dispose();
+  }
+
   // ── Fotoğraf Seç & Yükle ────────────────────────────────────────────────────
   Future<void> _pickAndUploadPhoto() async {
     // Kaynak seçtir
@@ -489,58 +519,168 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Widget _buildPersonalInfoCard(ThemeData theme, bool isDark) {
     final l10n = ref.watch(appL10nProvider);
-    return _buildSection(
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.08);
+
+    return _buildEditableSection(
       title: l10n.profilePersonalInfo,
       icon: Icons.person_rounded,
       theme: theme,
       isDark: isDark,
-      children: [
-        _InfoTile(
-          icon: Icons.badge_rounded,
-          label: l10n.profileFullName,
-          value: _profile.fullName,
-          theme: theme,
-        ),
-        _InfoTile(
-          icon: Icons.email_outlined,
-          label: l10n.profileEmail,
-          value: _profile.email,
-          theme: theme,
-        ),
-        if (_profile.phone != null)
-          _InfoTile(
-            icon: Icons.phone_outlined,
-            label: l10n.profilePhone,
-            value: _profile.phone!,
-            theme: theme,
-          ),
-      ],
+      isEditing: _editingPersonal,
+      onEditToggle: () => setState(() {
+        if (_editingPersonal) {
+          // Kaydet
+          _profile = _profile.copyWith(
+            firstName: _firstNameCtrl.text.trim().isNotEmpty
+                ? _firstNameCtrl.text.trim()
+                : _profile.firstName,
+            lastName: _lastNameCtrl.text.trim().isNotEmpty
+                ? _lastNameCtrl.text.trim()
+                : _profile.lastName,
+            phone: _phoneCtrl.text.trim().isNotEmpty
+                ? _phoneCtrl.text.trim()
+                : null,
+          );
+        } else {
+          // Düzenlemeye başla — mevcut değerleri yükle
+          _firstNameCtrl.text = _profile.firstName;
+          _lastNameCtrl.text  = _profile.lastName;
+          _phoneCtrl.text     = _profile.phone ?? '';
+        }
+        _editingPersonal = !_editingPersonal;
+      }),
+      children: _editingPersonal
+          ? [
+              _EditField(
+                controller: _firstNameCtrl,
+                icon: Icons.badge_rounded,
+                label: l10n.profileFullName.split(' ').first,
+                hint: 'Ad',
+                theme: theme,
+                isDark: isDark,
+                borderColor: borderColor,
+              ),
+              const SizedBox(height: 10),
+              _EditField(
+                controller: _lastNameCtrl,
+                icon: Icons.badge_outlined,
+                label: 'Soyad',
+                hint: 'Soyad',
+                theme: theme,
+                isDark: isDark,
+                borderColor: borderColor,
+              ),
+              const SizedBox(height: 10),
+              _EditField(
+                controller: _phoneCtrl,
+                icon: Icons.phone_outlined,
+                label: l10n.profilePhone,
+                hint: '+32 470 000 000',
+                keyboardType: TextInputType.phone,
+                theme: theme,
+                isDark: isDark,
+                borderColor: borderColor,
+              ),
+              _InfoTile(
+                icon: Icons.email_outlined,
+                label: l10n.profileEmail,
+                value: _profile.email,
+                theme: theme,
+              ),
+            ]
+          : [
+              _InfoTile(
+                icon: Icons.badge_rounded,
+                label: l10n.profileFullName,
+                value: _profile.fullName,
+                theme: theme,
+              ),
+              _InfoTile(
+                icon: Icons.email_outlined,
+                label: l10n.profileEmail,
+                value: _profile.email,
+                theme: theme,
+              ),
+              if (_profile.phone != null)
+                _InfoTile(
+                  icon: Icons.phone_outlined,
+                  label: l10n.profilePhone,
+                  value: _profile.phone!,
+                  theme: theme,
+                ),
+            ],
     );
   }
 
   Widget _buildVehicleCard(ThemeData theme, bool isDark) {
     final l10n = ref.watch(appL10nProvider);
-    return _buildSection(
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.08);
+
+    return _buildEditableSection(
       title: l10n.profileVehicleInfo,
       icon: Icons.directions_car_rounded,
       theme: theme,
       isDark: isDark,
-      children: [
-        if (_profile.vehiclePlate != null)
-          _InfoTile(
-            icon: Icons.confirmation_number_outlined,
-            label: l10n.profilePlate,
-            value: _profile.vehiclePlate!,
-            theme: theme,
-          ),
-        if (_profile.vehicleType != null)
-          _InfoTile(
-            icon: Icons.local_shipping_rounded,
-            label: l10n.profileVehicleType,
-            value: _profile.vehicleType!,
-            theme: theme,
-          ),
-      ],
+      isEditing: _editingVehicle,
+      onEditToggle: () => setState(() {
+        if (_editingVehicle) {
+          // Kaydet
+          _profile = _profile.copyWith(
+            vehiclePlate: _plateCtrl.text.trim().isNotEmpty
+                ? _plateCtrl.text.trim()
+                : _profile.vehiclePlate,
+            vehicleType: _vehicleTypeCtrl.text.trim().isNotEmpty
+                ? _vehicleTypeCtrl.text.trim()
+                : _profile.vehicleType,
+          );
+        } else {
+          _plateCtrl.text = _profile.vehiclePlate ?? '';
+          _vehicleTypeCtrl.text = _profile.vehicleType ?? '';
+        }
+        _editingVehicle = !_editingVehicle;
+      }),
+      children: _editingVehicle
+          ? [
+              _EditField(
+                controller: _plateCtrl,
+                icon: Icons.confirmation_number_outlined,
+                label: l10n.profilePlate,
+                hint: '1-ABC-123',
+                theme: theme,
+                isDark: isDark,
+                borderColor: borderColor,
+              ),
+              const SizedBox(height: 10),
+              _EditField(
+                controller: _vehicleTypeCtrl,
+                icon: Icons.local_shipping_rounded,
+                label: l10n.profileVehicleType,
+                hint: 'Kamyon / Tır / Van',
+                theme: theme,
+                isDark: isDark,
+                borderColor: borderColor,
+              ),
+            ]
+          : [
+              if (_profile.vehiclePlate != null)
+                _InfoTile(
+                  icon: Icons.confirmation_number_outlined,
+                  label: l10n.profilePlate,
+                  value: _profile.vehiclePlate!,
+                  theme: theme,
+                ),
+              if (_profile.vehicleType != null)
+                _InfoTile(
+                  icon: Icons.local_shipping_rounded,
+                  label: l10n.profileVehicleType,
+                  value: _profile.vehicleType!,
+                  theme: theme,
+                ),
+            ],
     );
   }
 
@@ -848,6 +988,99 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  // ── Düzenlenebilir Bölüm (Kalem / Kaydet butonu başlıkta) ──────────────────
+  Widget _buildEditableSection({
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+    required ThemeData theme,
+    required bool isDark,
+    required bool isEditing,
+    required VoidCallback onEditToggle,
+  }) {
+    final cardBg = theme.colorScheme.surface;
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.08);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isEditing
+              ? AppColors.accent.withValues(alpha: 0.5)
+              : borderColor,
+          width: isEditing ? 1.5 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 14, color: AppColors.accent),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onSurfaceVariant,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+              ),
+              // Düzenle / Kaydet butonu
+              GestureDetector(
+                onTap: onEditToggle,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isEditing
+                        ? AppColors.success.withValues(alpha: 0.12)
+                        : AppColors.accent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isEditing
+                          ? AppColors.success.withValues(alpha: 0.4)
+                          : AppColors.accent.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isEditing ? Icons.check_rounded : Icons.edit_rounded,
+                        size: 12,
+                        color: isEditing ? AppColors.success : AppColors.accent,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isEditing ? 'Kaydet' : 'Düzenle',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: isEditing ? AppColors.success : AppColors.accent,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...children,
+        ],
+      ),
+    );
+  }
+
   Widget _buildLogoutButton(ThemeData theme, bool isDark) {
     final l10n = ref.watch(appL10nProvider);
     return OutlinedButton.icon(
@@ -986,6 +1219,73 @@ class _InfoTile extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Düzenleme Alanı Widget'ı ──────────────────────────────────────────────────
+class _EditField extends StatelessWidget {
+  final TextEditingController controller;
+  final IconData icon;
+  final String label;
+  final String hint;
+  final TextInputType? keyboardType;
+  final ThemeData theme;
+  final bool isDark;
+  final Color borderColor;
+
+  const _EditField({
+    required this.controller,
+    required this.icon,
+    required this.label,
+    required this.hint,
+    required this.theme,
+    required this.isDark,
+    required this.borderColor,
+    this.keyboardType,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      style: TextStyle(
+        color: theme.colorScheme.onSurface,
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+      ),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Icon(icon, size: 18, color: theme.colorScheme.onSurfaceVariant),
+        labelStyle: TextStyle(
+          color: theme.colorScheme.onSurfaceVariant,
+          fontSize: 13,
+        ),
+        hintStyle: TextStyle(
+          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+          fontSize: 13,
+        ),
+        filled: true,
+        fillColor: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.black.withValues(alpha: 0.03),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: borderColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: borderColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: AppColors.accent, width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        isDense: true,
       ),
     );
   }

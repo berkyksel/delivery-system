@@ -10,6 +10,7 @@ import '../../presentation/screens/delivery/quick_quote_screen.dart';
 import '../../presentation/screens/history/history_screen.dart';
 import '../../presentation/screens/tariff/tariff_screen.dart';
 import '../../presentation/screens/profile/profile_screen.dart';
+import '../../presentation/screens/notifications/notifications_screen.dart';
 import '../../presentation/screens/main_shell.dart';
 import '../../presentation/screens/admin/admin_shell.dart';
 import '../../presentation/screens/admin/admin_dashboard_screen.dart';
@@ -31,6 +32,7 @@ class AppRoutes {
   static const String history = '/history';
   static const String tariff = '/tariff';
   static const String profile = '/profile';
+  static const String notifications = '/notifications';
 
   // ─── Admin Rotaları ────────────────────────────────────────────────────────
   static const String admin = '/admin';
@@ -63,6 +65,8 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Giriş yapılmışsa login/register'da durmamalı
       if (isLoggedIn && isPublic) {
+        // Profil henüz yükleniyorsa bekle (timing sorunu önlenir)
+        if (profileAsync.isLoading) return null;
         final role = profileAsync.value?.role;
         if (role == UserRole.manager) return AppRoutes.admin;
         return AppRoutes.home;
@@ -70,6 +74,8 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Admin olmayan kullanıcı admin rotalarına giremez
       if (isLoggedIn && location.startsWith('/admin')) {
+        // Profil henüz yükleniyorsa bekle
+        if (profileAsync.isLoading) return null;
         final role = profileAsync.value?.role;
         if (role != UserRole.manager) return AppRoutes.home;
       }
@@ -106,6 +112,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const ProfileScreen(),
           ),
         ],
+      ),
+      GoRoute(
+        path: AppRoutes.notifications,
+        builder: (context, state) => const NotificationsScreen(),
       ),
       GoRoute(
         path: AppRoutes.newDelivery,

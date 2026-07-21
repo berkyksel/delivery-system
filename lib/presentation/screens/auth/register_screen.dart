@@ -21,7 +21,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _plateCtrl = TextEditingController();
-  UserRole _selectedRole = UserRole.driver;
+  final UserRole _selectedRole = UserRole.driver;
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -247,9 +247,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Widget _buildPersonalInfo(bool isDark) {
     final textColor = isDark ? AppColors.textPrimary : const Color(0xFF0F172A);
-    final mutedColor = isDark ? AppColors.textMuted : const Color(0xFF94A3B8);
-    final primaryColor = AppColors.primary;
-    final borderColor = isDark ? AppColors.glassBorder : const Color(0xFFCBD5E1);
     return _buildSectionCard(
       title: 'KİŞİSEL BİLGİLER',
       isDark: isDark,
@@ -276,55 +273,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        Row(
-          children: UserRole.values
-              .map((role) => Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _selectedRole = role),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        margin: EdgeInsets.only(
-                            right: role == UserRole.driver ? 8 : 0),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: _selectedRole == role
-                              ? primaryColor.withValues(alpha: 0.2)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: _selectedRole == role
-                                ? primaryColor
-                                : borderColor,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(
-                              role == UserRole.driver
-                                  ? Icons.drive_eta_rounded
-                                  : Icons.manage_accounts_rounded,
-                              color: _selectedRole == role
-                                  ? primaryColor
-                                  : mutedColor,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              role.label,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: _selectedRole == role
-                                    ? primaryColor
-                                    : mutedColor,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ))
-              .toList(),
-        ),
       ],
     );
   }

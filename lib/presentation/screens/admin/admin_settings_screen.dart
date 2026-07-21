@@ -4,6 +4,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/theme/theme_provider.dart';
+import '../../../core/theme/locale_provider.dart';
+import '../../../data/models/delivery_model.dart';
+import '../../providers/auth_provider.dart';
 
 // ─── Admin Ayarlar State ──────────────────────────────────────────────────────
 class _AdminSettingsState {
@@ -125,11 +129,22 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                     .animate()
                     .fadeIn(delay: 200.ms, duration: 400.ms)
                     .slideY(begin: 0.1),
+                const SizedBox(height: 16),
+                // ── Görünüm & Dil Tercihleri ──────────────────────────────
+                _buildPreferencesCard(theme, isDark)
+                    .animate()
+                    .fadeIn(delay: 250.ms, duration: 400.ms)
+                    .slideY(begin: 0.1),
                 const SizedBox(height: 24),
                 // ── Kaydet Butonu ─────────────────────────────────────────
                 _buildSaveButton(theme)
                     .animate()
                     .fadeIn(delay: 300.ms, duration: 400.ms),
+                const SizedBox(height: 16),
+                // ── Çıkış Yap ─────────────────────────────────────────────
+                _buildLogoutButton(theme)
+                    .animate()
+                    .fadeIn(delay: 350.ms, duration: 400.ms),
                 const SizedBox(height: 80),
               ]),
             ),
@@ -402,6 +417,284 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
           ),
         ),
+      ),
+    );
+  }
+
+  // ── Görünüm & Dil Tercihleri Kartı ──────────────────────────────────────────
+  Widget _buildPreferencesCard(ThemeData theme, bool isDark) {
+    final isDarkMode = ref.watch(themeProvider) == ThemeMode.dark;
+    final selectedLang = ref.watch(quoteLanguageProvider);
+    final cardBg = theme.colorScheme.surface;
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.08);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Başlık
+          Row(
+            children: [
+              const Icon(Icons.palette_rounded, size: 14, color: Color(0xFF8B5CF6)),
+              const SizedBox(width: 8),
+              Text(
+                'GÖRÜNÜM & DİL',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurfaceVariant,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // ── Tema Seçici ───────────────────────────────────────────────────
+          Text(
+            'Uygulama Teması',
+            style: TextStyle(
+              color: theme.colorScheme.onSurface,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              // Koyu Tema
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => ref.read(themeProvider.notifier).setDark(),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: isDarkMode
+                          ? AppColors.primary.withValues(alpha: 0.2)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isDarkMode ? AppColors.primary : borderColor,
+                        width: isDarkMode ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.dark_mode_rounded,
+                          size: 22,
+                          color: isDarkMode
+                              ? AppColors.primary
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Koyu',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: isDarkMode
+                                ? FontWeight.w700
+                                : FontWeight.w400,
+                            color: isDarkMode
+                                ? theme.colorScheme.onSurface
+                                : theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              // Açık Tema
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => ref.read(themeProvider.notifier).setLight(),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: !isDarkMode
+                          ? AppColors.accent.withValues(alpha: 0.12)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: !isDarkMode ? AppColors.accent : borderColor,
+                        width: !isDarkMode ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.light_mode_rounded,
+                          size: 22,
+                          color: !isDarkMode
+                              ? AppColors.accent
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Açık',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: !isDarkMode
+                                ? FontWeight.w700
+                                : FontWeight.w400,
+                            color: !isDarkMode
+                                ? theme.colorScheme.onSurface
+                                : theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          // ── Dil Seçici ────────────────────────────────────────────────────
+          Text(
+            'Uygulama Dili',
+            style: TextStyle(
+              color: theme.colorScheme.onSurface,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Teklif ve fatura dilini seçin',
+            style: TextStyle(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: QuoteLanguage.values.map((lang) {
+              final isSelected = selectedLang == lang;
+              return GestureDetector(
+                onTap: () =>
+                    ref.read(quoteLanguageProvider.notifier).setLanguage(lang),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.primary.withValues(alpha: 0.15)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isSelected ? AppColors.primary : borderColor,
+                      width: isSelected ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        lang.flag,
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        lang.label,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w400,
+                          color: isSelected
+                              ? theme.colorScheme.onSurface
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      if (isSelected) ...[
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.check_circle_rounded,
+                          size: 13,
+                          color: AppColors.primary,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Çıkış Yap Butonu ─────────────────────────────────────────────────────────
+  Widget _buildLogoutButton(ThemeData theme) {
+    return OutlinedButton.icon(
+      onPressed: () {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: theme.colorScheme.surface,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16)),
+            title: Text(
+              'Çıkış Yap',
+              style: TextStyle(color: theme.colorScheme.onSurface),
+            ),
+            content: Text(
+              'Yönetici oturumunu kapatmak istediğinize emin misiniz?',
+              style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(
+                  'İptal',
+                  style: TextStyle(
+                      color: theme.colorScheme.onSurfaceVariant),
+                ),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  await ref
+                      .read(authNotifierProvider.notifier)
+                      .signOut();
+                },
+                child: const Text(
+                  'Çıkış Yap',
+                  style: TextStyle(color: AppColors.error),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+      icon: const Icon(Icons.logout_rounded, color: AppColors.error),
+      label: const Text(
+        'Çıkış Yap',
+        style: TextStyle(color: AppColors.error),
+      ),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(double.infinity, 52),
+        side: BorderSide(color: AppColors.error.withValues(alpha: 0.4)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }

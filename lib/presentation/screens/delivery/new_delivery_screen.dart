@@ -224,6 +224,7 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final inputTextStyle = TextStyle(color: theme.colorScheme.onSurface);
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
@@ -258,7 +259,7 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
               [
                 TextFormField(
                   controller: _companyCtrl,
-                  style: const TextStyle(color: AppColors.textPrimary),
+                  style: inputTextStyle,
                   decoration: const InputDecoration(
                     labelText: 'Firma Adı',
                     prefixIcon: Icon(Icons.business_outlined),
@@ -268,7 +269,7 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _contactCtrl,
-                  style: const TextStyle(color: AppColors.textPrimary),
+                  style: inputTextStyle,
                   decoration: const InputDecoration(
                     labelText: 'İletişim Kişisi (Opsiyonel)',
                     prefixIcon: Icon(Icons.person_outlined),
@@ -308,8 +309,8 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
                   controller: _havenCtrl,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurface,
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
                   ),
@@ -813,6 +814,7 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
 
   // ── Dizel Toeslag ──────────────────────────────────────────────────────────
   Widget _buildDieselSection() {
+    final theme = Theme.of(context);
     final hasDiesel =
         (double.tryParse(_dieselPercentCtrl.text.replaceAll(',', '.')) ?? 0) >
             0;
@@ -825,8 +827,8 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
                 controller: _dieselPercentCtrl,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface,
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                 ),
