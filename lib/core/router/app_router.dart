@@ -17,6 +17,7 @@ import '../../presentation/screens/admin/admin_dashboard_screen.dart';
 import '../../presentation/screens/admin/admin_deliveries_screen.dart';
 import '../../presentation/screens/admin/admin_drivers_screen.dart';
 import '../../presentation/screens/admin/admin_settings_screen.dart';
+import '../../presentation/screens/payment/payment_screen.dart';
 import '../../data/models/delivery_model.dart';
 import '../../data/models/user_profile_model.dart';
 import '../../presentation/providers/auth_provider.dart';
@@ -39,6 +40,9 @@ class AppRoutes {
   static const String adminDeliveries = '/admin/deliveries';
   static const String adminDrivers = '/admin/drivers';
   static const String adminSettings = '/admin/settings';
+
+  // ─── Ödeme Rotaları ────────────────────────────────────────────────────────
+  static const String payment = '/payment';
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -53,6 +57,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final location = state.matchedLocation;
       final isPublic =
           location == AppRoutes.login || location == AppRoutes.register;
+      final isPayment = location == AppRoutes.payment;
 
       // Auth yükleniyorsa bekle (ilk başlatmada null gelir)
       if (authState.isLoading) return null;
@@ -67,9 +72,32 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (isLoggedIn && isPublic) {
         // Profil henüz yükleniyorsa bekle (timing sorunu önlenir)
         if (profileAsync.isLoading) return null;
-        final role = profileAsync.value?.role;
+        final profile = profileAsync.value;
+        final role = profile?.role;
         if (role == UserRole.manager) return AppRoutes.admin;
+        // Normal kullanıcı: ödeme yapılmamışsa ödeme sayfasına yönlendir
+        if (profile?.isPaid != true) return AppRoutes.payment;
         return AppRoutes.home;
+      }
+
+      // Giriş yapılmış normal kullanıcı — ödeme sayfası yönlendirmesi
+      if (isLoggedIn && !isPayment) {
+        // Profil henüz yükleniyorsa bekle
+        if (profileAsync.isLoading) return null;
+        final profile = profileAsync.value;
+        final role = profile?.role;
+        // Admin ödeme sayfasını atlar
+        if (role == UserRole.manager) {
+          // Admin ödeme sayfasına gelirse admin paneline yönlendir
+          if (isPayment) return AppRoutes.admin;
+          return null;
+        }
+        // Normal kullanıcı, ödeme yapılmamışsa → ödeme sayfasına yönlendir
+        // (admin rotaları ve payment sayfası hariç)
+        if (profile?.isPaid != true &&
+            !location.startsWith('/admin')) {
+          return AppRoutes.payment;
+        }
       }
 
       // Admin olmayan kullanıcı admin rotalarına giremez
@@ -90,6 +118,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.register,
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.payment,
+        builder: (context, state) => const PaymentScreen(),
       ),
       // ── Şoför Shell ──────────────────────────────────────────────────────
       ShellRoute(

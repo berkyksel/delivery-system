@@ -14,6 +14,7 @@ class UserProfile {
   final bool notificationsEnabled;
   final String? currentSide; // 'rechteroever' or 'linkeroever'
   final DateTime? createdAt;
+  final bool isPaid; // Ödeme durumu
 
   const UserProfile({
     required this.uid,
@@ -29,6 +30,7 @@ class UserProfile {
     this.notificationsEnabled = true,
     this.currentSide,
     this.createdAt,
+    this.isPaid = false,
   });
 
   String get fullName => '$firstName $lastName';
@@ -48,6 +50,7 @@ class UserProfile {
       'notificationsEnabled': notificationsEnabled,
       'currentSide': currentSide,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
+      'isPaid': isPaid,
     };
   }
 
@@ -72,6 +75,7 @@ class UserProfile {
       createdAt: data['createdAt'] != null
           ? (data['createdAt'] as Timestamp).toDate()
           : null,
+      isPaid: data['isPaid'] ?? false,
     );
   }
 
@@ -86,6 +90,7 @@ class UserProfile {
     String? preferredLanguage,
     bool? notificationsEnabled,
     String? currentSide,
+    bool? isPaid,
   }) {
     return UserProfile(
       uid: uid,
@@ -101,6 +106,7 @@ class UserProfile {
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       currentSide: currentSide ?? this.currentSide,
       createdAt: createdAt,
+      isPaid: isPaid ?? this.isPaid,
     );
   }
 }

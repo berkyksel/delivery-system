@@ -64,6 +64,11 @@ class UserRepository {
     await _col.doc(uid).update({'role': role.name});
   }
 
+  // ── Ödeme Durumu Güncelle ─────────────────────────────────────────────────
+  Future<void> completePayment(String uid) async {
+    await _col.doc(uid).update({'isPaid': true});
+  }
+
   // ── Kullanıcı Sil ────────────────────────────────────────────────────────
   Future<void> deleteUser(String uid) async {
     await _col.doc(uid).delete();
