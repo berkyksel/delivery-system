@@ -455,7 +455,7 @@ class _NewDeliveryScreenState extends ConsumerState<NewDeliveryScreen>
                   },
                 ),
                 const SizedBox(height: 12),
-                Divider(color: AppColors.glassBorder, height: 1),
+                Divider(color: Theme.of(context).dividerColor, height: 1),
                 const SizedBox(height: 12),
                 _ContainerOptionTile(
                   icon: Icons.warning_amber_rounded,
@@ -1077,6 +1077,29 @@ class _ContainerOptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Tema-aware renkler
+    final borderInactive = isDark
+        ? Colors.white.withValues(alpha: 0.12)
+        : Colors.black.withValues(alpha: 0.12);
+    final iconBgInactive = isDark
+        ? Colors.white.withValues(alpha: 0.06)
+        : Colors.black.withValues(alpha: 0.05);
+    final iconInactiveColor = theme.colorScheme.onSurfaceVariant;
+    final titleActiveColor = theme.colorScheme.onSurface;
+    final titleInactiveColor = theme.colorScheme.onSurfaceVariant;
+    final feeBgInactive = isDark
+        ? Colors.white.withValues(alpha: 0.07)
+        : Colors.black.withValues(alpha: 0.06);
+    final feeTextInactive = theme.colorScheme.onSurfaceVariant;
+    final subtitleColor = theme.colorScheme.onSurfaceVariant;
+    final dutchColor = theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.65);
+    final switchTrackInactive = isDark
+        ? Colors.white.withValues(alpha: 0.15)
+        : Colors.black.withValues(alpha: 0.1);
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1088,7 +1111,7 @@ class _ContainerOptionTile extends StatelessWidget {
         border: Border.all(
           color: isEnabled
               ? iconColor.withValues(alpha: 0.4)
-              : AppColors.glassBorder,
+              : borderInactive,
           width: isEnabled ? 1.5 : 1,
         ),
       ),
@@ -1100,13 +1123,13 @@ class _ContainerOptionTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: isEnabled
                   ? iconColor.withValues(alpha: 0.15)
-                  : AppColors.bgCardLight,
+                  : iconBgInactive,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               icon,
               size: 20,
-              color: isEnabled ? iconColor : AppColors.textMuted,
+              color: isEnabled ? iconColor : iconInactiveColor,
             ),
           ),
           const SizedBox(width: 12),
@@ -1121,9 +1144,7 @@ class _ContainerOptionTile extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: isEnabled
-                            ? AppColors.textPrimary
-                            : AppColors.textSecondary,
+                        color: isEnabled ? titleActiveColor : titleInactiveColor,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1133,7 +1154,7 @@ class _ContainerOptionTile extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: isEnabled
                             ? iconColor.withValues(alpha: 0.15)
-                            : AppColors.bgCardLight,
+                            : feeBgInactive,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -1141,7 +1162,7 @@ class _ContainerOptionTile extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
-                          color: isEnabled ? iconColor : AppColors.textMuted,
+                          color: isEnabled ? iconColor : feeTextInactive,
                         ),
                       ),
                     ),
@@ -1150,14 +1171,13 @@ class _ContainerOptionTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: const TextStyle(
-                      fontSize: 11, color: AppColors.textMuted),
+                  style: TextStyle(fontSize: 11, color: subtitleColor),
                 ),
                 Text(
                   dutchLabel,
                   style: TextStyle(
                     fontSize: 10,
-                    color: AppColors.textMuted.withValues(alpha: 0.7),
+                    color: dutchColor,
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -1172,7 +1192,7 @@ class _ContainerOptionTile extends StatelessWidget {
               if (states.contains(WidgetState.selected)) {
                 return iconColor.withValues(alpha: 0.3);
               }
-              return AppColors.bgCardLight;
+              return switchTrackInactive;
             }),
           ),
         ],
